@@ -20,7 +20,6 @@ import {
   registerLocalExecutors,
   createGenerator,
   createVideoGenerator,
-  isFalVideoModelId,
   writeArtifact,
   type DispatchJob,
 } from "@aistudio/engine";
@@ -58,10 +57,13 @@ function ensureEngineBootstrapped(): void {
       // __apiKey is injected in makeDispatch() after DB lookup; fall back to the
       // provider-specific env var.  If neither is present the provider is not
       // configured — fail clearly.
-      const envKey =
-        providerId === "replicate" ? process.env.REPLICATE_API_TOKEN : process.env.FAL_API_KEY;
+      // Map is exhaustive: unknown providers get undefined, not the fal key by accident.
+      const ENV_KEYS: Record<string, string | undefined> = {
+        fal:       process.env.FAL_API_KEY,
+        replicate: process.env.REPLICATE_API_TOKEN,
+      };
       const apiKey =
-        (context.params.__apiKey as string | undefined) ?? envKey;
+        (context.params.__apiKey as string | undefined) ?? ENV_KEYS[providerId];
 
       if (!apiKey) {
         throw new Error(
@@ -81,9 +83,24 @@ function ensureEngineBootstrapped(): void {
         context.params.seed !== undefined && Number(context.params.seed) !== -1
           ? Number(context.params.seed)
           : undefined;
+      // Read node-level quality params so user-configured values (e.g. 28 steps
+      // for FLUX Pro vs 4 for Schnell) reach the provider adapter rather than
+      // being silently discarded. Both are optional — adapters supply their own
+      // defaults when absent.
+      const numInferenceSteps =
+        context.params.num_inference_steps !== undefined
+          ? Number(context.params.num_inference_steps)
+          : undefined;
+      const guidanceScale =
+        context.params.guidance_scale !== undefined
+          ? Number(context.params.guidance_scale)
+          : undefined;
 
-      // Route to the video path for known video model IDs; image path for everything else.
-      if (providerId === "fal" && modelId && isFalVideoModelId(modelId)) {
+      // Route to the video path for any node whose output is a video port.
+      // This covers the generic "video-generation" type, provider-specific
+      // video nodes (e.g. "fal/kling-1.6", "replicate/minimax-video-01"),
+      // and any future video provider — without model-ID inspection.
+      if (definition.outputs.some((o) => o.type === "video")) {
         const videoGen  = createVideoGenerator({ provider: providerId, apiKey, modelId });
         const generated = await videoGen.generateVideo({ prompt, width, height, duration, signal: context.signal });
 
@@ -105,7 +122,7 @@ function ensureEngineBootstrapped(): void {
 
       // Image path (FLUX, SDXL, etc.)
       const generator = createGenerator({ provider: providerId, apiKey, modelId });
-      const generated = await generator.generate({ prompt, width, height, seed, signal: context.signal });
+      const generated = await generator.generate({ prompt, width, height, seed, numInferenceSteps, guidanceScale, signal: context.signal });
 
       const format = generated.mimeType.replace(/^image\//, "") === "jpeg" ? "jpeg" : "png";
       const artifactRef = await writeArtifact({
@@ -336,10 +353,22 @@ export async function GET(
 }
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: workflowId } = await params;
+
+  // Parse optional budget cap from request body.
+  // Non-positive or missing values are treated as "no cap" (undefined).
+  let budgetCap: number | undefined;
+  try {
+    const body = (await request.json()) as { budgetCap?: unknown };
+    if (typeof body.budgetCap === "number" && body.budgetCap > 0) {
+      budgetCap = body.budgetCap;
+    }
+  } catch {
+    // Empty or non-JSON body — budgetCap stays undefined.
+  }
 
   // Load workflow from DB
   const db = getDb();
@@ -378,6 +407,7 @@ export async function POST(
     runId,
     workflowId,
     workflow: graph,
+    budgetCap,
   });
 
   // Insert the runs record immediately so nodeExecutions FK references are valid

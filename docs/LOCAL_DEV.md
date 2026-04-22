@@ -22,14 +22,17 @@ The app will be available at **http://localhost:3001**.
 
 ## Environment variables
 
-| Variable     | Default                  | Description                                       |
-|--------------|--------------------------|---------------------------------------------------|
-| `APP_PORT`   | `3001`                   | Host port mapped to the container                  |
-| `PORT`       | `3000`                   | Internal Next.js port (inside container)           |
-| `REDIS_URL`  | `redis://redis:6379`     | Redis connection URL                               |
-| `DATA_DIR`   | `/data`                  | Persistent data directory (SQLite, assets, config) |
-| `NODE_ENV`   | `development`            | Node environment                                   |
-| `LOG_LEVEL`  | `info`                   | Logging level (debug, info, warn, error)           |
+| Variable                | Default                   | Description                                                  |
+|-------------------------|---------------------------|--------------------------------------------------------------|
+| `APP_PORT`              | `3001`                    | Host port mapped to the container                             |
+| `PORT`                  | `3000`                    | Internal Next.js port (inside container)                      |
+| `REDIS_URL`             | `redis://redis:6379`      | Redis connection URL                                          |
+| `DATA_DIR`              | `/data`                   | Persistent data directory (SQLite, assets, config)            |
+| `NODE_ENV`              | `development`             | Node environment                                              |
+| `LOG_LEVEL`             | `info`                    | Logging level (debug, info, warn, error)                      |
+| `MAX_CONCURRENT_NODES`  | `5`                       | Max concurrent prediction jobs per worker                     |
+| `API_BASE_URL`          | `http://localhost:3000`   | Base URL the scheduler uses to POST triggered runs            |
+| `SCHEDULER_BUDGET_CAP`  | `2.0`                     | USD budget cap passed to each scheduler-triggered run         |
 
 ## Common commands
 
@@ -38,7 +41,7 @@ The app will be available at **http://localhost:3001**.
 docker compose up -d --build
 
 # View logs (follow)
-docker compose logs -f app
+docker compose logs -f app worker
 
 # Restart after code changes (usually auto-reloads via Next.js HMR)
 docker compose restart app

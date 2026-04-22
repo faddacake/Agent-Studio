@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -e
 
 echo "[entrypoint] Starting AI Studio..."
@@ -6,30 +6,30 @@ echo "[entrypoint] Starting AI Studio..."
 # Ensure data directories exist
 mkdir -p /data/db /data/assets /data/config
 
-# Start Next.js server (Process 1)
+# Start Next.js server (Process 1) — run in a subshell so cd doesn't affect this script
 echo "[entrypoint] Starting Next.js server..."
-cd apps/web && node ../../node_modules/next/dist/bin/next start -p 3000 &
+(cd apps/web && node ../../node_modules/next/dist/bin/next start -p 3000) &
 NEXTJS_PID=$!
 
-# Start BullMQ worker (Process 2)
+# Start BullMQ worker + scheduler (Process 2)
 echo "[entrypoint] Starting BullMQ worker..."
 node packages/worker/dist/index.js &
 WORKER_PID=$!
 
 echo "[entrypoint] Both processes started (Next.js=$NEXTJS_PID, Worker=$WORKER_PID)"
 
-# POSIX-safe waiting (no wait -n in /bin/sh on Debian)
-NEXT_EXIT=0
-WORKER_EXIT=0
+# Exit as soon as either process dies so Docker can restart the container.
+# wait -n requires bash 4.3+ (available in node:22-slim / Debian Bookworm).
+wait -n
+EXIT_CODE=$?
 
-wait "$NEXTJS_PID" || NEXT_EXIT=$?
-wait "$WORKER_PID" || WORKER_EXIT=$?
-
-# Prefer the first non-zero exit code (if any)
-EXIT_CODE=$NEXT_EXIT
-if [ "$EXIT_CODE" -eq 0 ]; then
-  EXIT_CODE=$WORKER_EXIT
+# Log which process is still running for easier debugging
+if kill -0 "$NEXTJS_PID" 2>/dev/null; then
+  echo "[entrypoint] Worker exited first (code=$EXIT_CODE) — shutting down Next.js"
+  kill "$NEXTJS_PID" 2>/dev/null || true
+else
+  echo "[entrypoint] Next.js exited first (code=$EXIT_CODE) — shutting down worker"
+  kill "$WORKER_PID" 2>/dev/null || true
 fi
 
-echo "[entrypoint] Processes exited (Next.js=$NEXT_EXIT, Worker=$WORKER_EXIT). Exiting with $EXIT_CODE"
 exit "$EXIT_CODE"

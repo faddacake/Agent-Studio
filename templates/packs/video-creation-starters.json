@@ -1,0 +1,385 @@
+{
+  "manifest": {
+    "id": "video-creation-starters",
+    "name": "Video Creation Starters",
+    "version": "1.0.0",
+    "author": "AI Studio",
+    "description": "Three ready-to-run starting points for the core multimodal loop: generate images, animate them, and export.",
+    "category": "video-creation",
+    "tags": ["video", "image", "starter", "social", "reel", "story"],
+    "templates": ["quick-social-reel", "product-promo", "story-highlight"],
+    "previews": {
+      "quick-social-reel": "3 nodes: Prompt → Image Gen (9:16) → Video Gen. Fastest path to a short vertical reel.",
+      "product-promo": "4 nodes: Prompt → Best-of-N (4 variants) → Social Format → Export Bundle. Multi-variant product images formatted for every platform.",
+      "story-highlight": "5 nodes: Shared Prompt feeds two parallel Scene A / Scene B tracks, each Image Gen → Video Gen. Great for two-shot narratives."
+    },
+    "requiredNodeTypes": ["image-generation", "video-generation", "best-of-n", "social-format", "export-bundle"],
+    "source": "builtin"
+  },
+  "templates": {
+    "quick-social-reel": {
+      "version": 1,
+      "nodes": [
+        {
+          "id": "00000000-0000-4000-a100-000000000001",
+          "type": "prompt-template",
+          "position": { "x": 0, "y": 200 },
+          "data": {
+            "label": "Scene Prompt",
+            "params": {
+              "__nodeType": "prompt-template",
+              "template": "A cinematic {{style}} shot of {{subject}}, high quality, vivid colors, social media ready"
+            },
+            "retryCount": 0,
+            "timeoutMs": 15000
+          },
+          "inputs": [],
+          "outputs": [
+            { "id": "text_out", "name": "Text", "type": "text", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a100-000000000002",
+          "type": "image-generation",
+          "position": { "x": 340, "y": 200 },
+          "data": {
+            "label": "Image Generation",
+            "params": {
+              "__nodeType": "image-generation",
+              "width": 576,
+              "height": 1024,
+              "num_inference_steps": 28,
+              "guidance_scale": 7.5,
+              "seed": -1
+            },
+            "retryCount": 1,
+            "timeoutMs": 300000
+          },
+          "inputs": [
+            { "id": "image_in", "name": "Reference Image", "type": "image", "direction": "input" },
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "image_out", "name": "Image", "type": "image", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a100-000000000003",
+          "type": "video-generation",
+          "position": { "x": 700, "y": 200 },
+          "data": {
+            "label": "Video Generation",
+            "params": {
+              "__nodeType": "video-generation",
+              "duration": 5,
+              "resolution": "720p",
+              "seed": -1
+            },
+            "retryCount": 1,
+            "timeoutMs": 600000
+          },
+          "inputs": [
+            { "id": "image_in", "name": "Reference Image", "type": "image", "direction": "input" },
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "video_out", "name": "Video", "type": "video", "direction": "output" }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-4000-b100-000000000001",
+          "source": "00000000-0000-4000-a100-000000000001",
+          "sourceHandle": "text_out",
+          "target": "00000000-0000-4000-a100-000000000002",
+          "targetHandle": "prompt_in"
+        },
+        {
+          "id": "00000000-0000-4000-b100-000000000002",
+          "source": "00000000-0000-4000-a100-000000000001",
+          "sourceHandle": "text_out",
+          "target": "00000000-0000-4000-a100-000000000003",
+          "targetHandle": "prompt_in"
+        },
+        {
+          "id": "00000000-0000-4000-b100-000000000003",
+          "source": "00000000-0000-4000-a100-000000000002",
+          "sourceHandle": "image_out",
+          "target": "00000000-0000-4000-a100-000000000003",
+          "targetHandle": "image_in"
+        }
+      ]
+    },
+
+    "product-promo": {
+      "version": 1,
+      "nodes": [
+        {
+          "id": "00000000-0000-4000-a200-000000000001",
+          "type": "prompt-template",
+          "position": { "x": 0, "y": 200 },
+          "data": {
+            "label": "Product Prompt",
+            "params": {
+              "__nodeType": "prompt-template",
+              "template": "A professional product photo of {{product}}, studio lighting, clean white background, commercial quality, sharp focus"
+            },
+            "retryCount": 0,
+            "timeoutMs": 15000
+          },
+          "inputs": [],
+          "outputs": [
+            { "id": "text_out", "name": "Text", "type": "text", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a200-000000000002",
+          "type": "best-of-n",
+          "position": { "x": 340, "y": 200 },
+          "data": {
+            "label": "Best of N (4 variants)",
+            "params": {
+              "__nodeType": "best-of-n",
+              "n": 4,
+              "k": 1,
+              "provider": "mock",
+              "model": "mock-sdxl"
+            },
+            "retryCount": 1,
+            "timeoutMs": 600000
+          },
+          "inputs": [
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "selection_out", "name": "Top Candidates", "type": "json", "direction": "output" },
+            { "id": "all_candidates_out", "name": "All Candidates", "type": "json", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a200-000000000003",
+          "type": "social-format",
+          "position": { "x": 700, "y": 200 },
+          "data": {
+            "label": "Social Format",
+            "params": {
+              "__nodeType": "social-format",
+              "platforms": ["instagram", "x", "linkedin"],
+              "tone": "professional",
+              "includeHashtags": true,
+              "includeCTA": true
+            },
+            "retryCount": 0,
+            "timeoutMs": 60000
+          },
+          "inputs": [
+            { "id": "candidates_in", "name": "Candidates", "type": "json", "direction": "input" },
+            { "id": "text_in", "name": "Context Text", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "formatted_out", "name": "Formatted Candidates", "type": "json", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a200-000000000004",
+          "type": "export-bundle",
+          "position": { "x": 1060, "y": 200 },
+          "data": {
+            "label": "Export Bundle",
+            "params": {
+              "__nodeType": "export-bundle",
+              "format": "manifest-only",
+              "includeImages": true,
+              "includeMetadata": true,
+              "includeSocialText": true,
+              "includeScores": true
+            },
+            "retryCount": 0,
+            "timeoutMs": 30000
+          },
+          "inputs": [
+            { "id": "candidates_in", "name": "Candidates", "type": "json", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "bundle_out", "name": "Bundle Manifest", "type": "json", "direction": "output" },
+            { "id": "candidates_out", "name": "Exported Candidates", "type": "json", "direction": "output" }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-4000-b200-000000000001",
+          "source": "00000000-0000-4000-a200-000000000001",
+          "sourceHandle": "text_out",
+          "target": "00000000-0000-4000-a200-000000000002",
+          "targetHandle": "prompt_in"
+        },
+        {
+          "id": "00000000-0000-4000-b200-000000000002",
+          "source": "00000000-0000-4000-a200-000000000002",
+          "sourceHandle": "selection_out",
+          "target": "00000000-0000-4000-a200-000000000003",
+          "targetHandle": "candidates_in"
+        },
+        {
+          "id": "00000000-0000-4000-b200-000000000003",
+          "source": "00000000-0000-4000-a200-000000000003",
+          "sourceHandle": "formatted_out",
+          "target": "00000000-0000-4000-a200-000000000004",
+          "targetHandle": "candidates_in"
+        }
+      ]
+    },
+
+    "story-highlight": {
+      "version": 1,
+      "nodes": [
+        {
+          "id": "00000000-0000-4000-a300-000000000001",
+          "type": "prompt-template",
+          "position": { "x": 0, "y": 200 },
+          "data": {
+            "label": "Scene Prompt",
+            "params": {
+              "__nodeType": "prompt-template",
+              "template": "A {{mood}} scene of {{setting}}, cinematic lighting, wide establishing shot, 16:9"
+            },
+            "retryCount": 0,
+            "timeoutMs": 15000
+          },
+          "inputs": [],
+          "outputs": [
+            { "id": "text_out", "name": "Text", "type": "text", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a300-000000000002",
+          "type": "image-generation",
+          "position": { "x": 340, "y": 40 },
+          "data": {
+            "label": "Scene A — Image",
+            "params": {
+              "__nodeType": "image-generation",
+              "width": 1280,
+              "height": 720,
+              "num_inference_steps": 28,
+              "guidance_scale": 7.5,
+              "seed": 42
+            },
+            "retryCount": 1,
+            "timeoutMs": 300000
+          },
+          "inputs": [
+            { "id": "image_in", "name": "Reference Image", "type": "image", "direction": "input" },
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "image_out", "name": "Image", "type": "image", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a300-000000000003",
+          "type": "video-generation",
+          "position": { "x": 700, "y": 40 },
+          "data": {
+            "label": "Scene A — Video",
+            "params": {
+              "__nodeType": "video-generation",
+              "duration": 5,
+              "resolution": "720p",
+              "seed": 42
+            },
+            "retryCount": 1,
+            "timeoutMs": 600000
+          },
+          "inputs": [
+            { "id": "image_in", "name": "Reference Image", "type": "image", "direction": "input" },
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "video_out", "name": "Video", "type": "video", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a300-000000000004",
+          "type": "image-generation",
+          "position": { "x": 340, "y": 360 },
+          "data": {
+            "label": "Scene B — Image",
+            "params": {
+              "__nodeType": "image-generation",
+              "width": 1280,
+              "height": 720,
+              "num_inference_steps": 28,
+              "guidance_scale": 7.5,
+              "seed": 99
+            },
+            "retryCount": 1,
+            "timeoutMs": 300000
+          },
+          "inputs": [
+            { "id": "image_in", "name": "Reference Image", "type": "image", "direction": "input" },
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "image_out", "name": "Image", "type": "image", "direction": "output" }
+          ]
+        },
+        {
+          "id": "00000000-0000-4000-a300-000000000005",
+          "type": "video-generation",
+          "position": { "x": 700, "y": 360 },
+          "data": {
+            "label": "Scene B — Video",
+            "params": {
+              "__nodeType": "video-generation",
+              "duration": 5,
+              "resolution": "720p",
+              "seed": 99
+            },
+            "retryCount": 1,
+            "timeoutMs": 600000
+          },
+          "inputs": [
+            { "id": "image_in", "name": "Reference Image", "type": "image", "direction": "input" },
+            { "id": "prompt_in", "name": "Prompt", "type": "text", "direction": "input" }
+          ],
+          "outputs": [
+            { "id": "video_out", "name": "Video", "type": "video", "direction": "output" }
+          ]
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-4000-b300-000000000001",
+          "source": "00000000-0000-4000-a300-000000000001",
+          "sourceHandle": "text_out",
+          "target": "00000000-0000-4000-a300-000000000002",
+          "targetHandle": "prompt_in"
+        },
+        {
+          "id": "00000000-0000-4000-b300-000000000002",
+          "source": "00000000-0000-4000-a300-000000000001",
+          "sourceHandle": "text_out",
+          "target": "00000000-0000-4000-a300-000000000004",
+          "targetHandle": "prompt_in"
+        },
+        {
+          "id": "00000000-0000-4000-b300-000000000003",
+          "source": "00000000-0000-4000-a300-000000000002",
+          "sourceHandle": "image_out",
+          "target": "00000000-0000-4000-a300-000000000003",
+          "targetHandle": "image_in"
+        },
+        {
+          "id": "00000000-0000-4000-b300-000000000004",
+          "source": "00000000-0000-4000-a300-000000000004",
+          "sourceHandle": "image_out",
+          "target": "00000000-0000-4000-a300-000000000005",
+          "targetHandle": "image_in"
+        }
+      ]
+    }
+  }
+}

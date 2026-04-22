@@ -1,5 +1,62 @@
 # SESSION CONTEXT — AI Studio
 
+Date: 2026-04-21
+Session: V1 Final — Scheduler polish, Schedule UI, Docker production fixes, documentation (Prompts 51–54)
+
+---
+
+## Session Summary — V1 Final Polish (2026-04-21)
+
+**Prompt 51 — Scheduler sanity check:**
+- Fixed premature JSDoc comment close (`*/N` → `*\/N`) in `scheduler.ts` that caused TypeScript parse errors throughout the file.
+- Guarded `BUDGET_CAP` against `NaN` when `SCHEDULER_BUDGET_CAP` is set to an empty string.
+- Minor: startup log now mentions all three worker concurrency values.
+
+**Prompt 52 — Schedule UI wiring:**
+- `SchedulePanel.tsx` was already fully implemented (not just a skeleton). Added `onScheduleChange` callback to notify parent of create/enable/disable/delete events.
+- `WorkflowCanvas.tsx`: added `scheduleActive` state + `useEffect` that fetches initial schedule status on workflow load. Schedule button now shows a violet dot and active-tinted style when a schedule is enabled.
+
+**Prompt 53 — Docker production fixes:**
+- `Dockerfile`: added `ffmpeg` to runner-stage apt install (required by `editorExportJobRealRenderer.ts`); added `COPY --from=builder` for `packages/shared/dist` and `packages/engine/dist` — both were missing, causing the worker to crash on the first `@aistudio/shared` or `@aistudio/engine` import.
+- `entrypoint.sh`: changed shebang to `#!/bin/bash`; replaced POSIX `wait` pair with `wait -n` (fail-fast — container exits when either process dies); wrapped Next.js `cd` in a subshell.
+- `docker-compose.yml`: added `worker` service (`pnpm --filter @aistudio/worker dev`) with `API_BASE_URL=http://app:3000` and `depends_on: app: condition: service_healthy`.
+
+**Prompt 54 — Documentation:**
+- `README.md`: rewrote with full feature list, node table, provider setup, package layout, and local dev instructions.
+- `docs/BUILD_STATUS.md`: replaced stale early-pipeline milestones with a complete V1 checklist and V1.1 gap list.
+- `AI_STUDIO_TASKS.md`: replaced 6 ancient items with structured V1.1 and V2 backlog.
+- `docs/SESSION_CONTEXT.md`: updated to reflect Prompts 51–54.
+
+Next recommended task: Implement the scheduled workflows audit page — a settings-level view listing all `workflow_schedule:*` entries with their cron expression, enabled state, and a link to each canvas (Task 2 in `AI_STUDIO_TASKS.md`).
+
+---
+
+Date: 2026-04-19
+Session: Provider key status in InspectorPanel + multi-session polish (Prompts 29–37)
+
+---
+
+## Session Summary — Provider Key Status Indicator (2026-04-19)
+
+**Prompt 37**: Added a proactive provider-key status hint to the `ProviderModelPicker` in `InspectorPanel.tsx`.
+
+- `ProviderModelPicker` now fetches `GET /api/providers` on mount to learn which provider IDs have API keys stored.
+- If the currently selected provider (e.g. Replicate) has no key configured, an amber hint appears below the model selector: `"No Replicate API key — Add key →"` linking to `/settings/providers`.
+- Hint is suppressed while the fetch is in flight (null state) to avoid a flash of incorrect warning on first render.
+- Zero new TypeScript errors; only pre-existing `label possibly undefined` test error remains.
+
+**Prior sessions (Prompts 29–36, summarised from previous context):**
+- Inspector model picker aligned to `config/models.ts`; FLUX 1.1 Pro as fal default (Prompt 29)
+- `defaultParams` auto-applied on model/provider change (Prompt 30)
+- Estimated cost hint below model selector (Prompt 31)
+- Auto-captions CC toggle + voiceover placeholder in video editor (Prompt 32–34)
+- Real voiceover endpoint `POST /api/editor-projects/[id]/voiceover` via fal-ai/kokoro (Prompt 35)
+- Pre-save API key validation: `/api/providers/[id]/validate` extended to accept key in request body; inline "Test" button in ProviderCard (Prompt 36)
+
+Next recommended task: Surface provider configuration status in the workflows list or canvas toolbar — e.g. a "No providers configured" banner when `GET /api/providers` returns an empty array.
+
+---
+
 Date: 2026-03-28
 Session: Export System Complete — Full Interaction, Accessibility, and Shortcut Discoverability ✅ MILESTONE
 

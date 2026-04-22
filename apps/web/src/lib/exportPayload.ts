@@ -9,7 +9,7 @@
  */
 
 import type { RenderPlan } from "./renderPlan";
-import type { AspectRatio } from "./editorProjectTypes";
+import type { AspectRatio, AudioTrack } from "./editorProjectTypes";
 import type { ExportJobPayload, ExportSceneEntry } from "@aistudio/shared";
 
 export type { ExportJobPayload, ExportSceneEntry };
@@ -21,11 +21,14 @@ export type { ExportJobPayload, ExportSceneEntry };
  * @param plan - The canonical render plan from `buildRenderPlan`.
  * @param projectId - ID of the source editor project.
  * @param aspectRatio - Output aspect ratio for the renderer.
+ * @param options.isPreview - When true, signals the renderer to produce a
+ *   fast low-resolution proxy (e.g. 480p, first 30 s only).
  */
 export function buildExportPayload(
   plan: RenderPlan,
   projectId: string,
   aspectRatio: AspectRatio,
+  options?: { isPreview?: boolean; audioTrack?: AudioTrack | null },
 ): ExportJobPayload {
   const scenes: ExportSceneEntry[] = plan.scenes.map((entry) => ({
     id: entry.id,
@@ -39,6 +42,9 @@ export function buildExportPayload(
     fadeDurationMs: entry.fadeDurationMs,
     fadeStartMs: entry.fadeStartMs,
     textOverlay: entry.textOverlay,
+    ...(entry.trimStartMs != null && entry.trimStartMs > 0
+      ? { trimStartMs: entry.trimStartMs }
+      : {}),
   }));
 
   return {
@@ -46,5 +52,7 @@ export function buildExportPayload(
     aspectRatio,
     totalDurationMs: plan.totalDurationMs,
     scenes,
+    ...(options?.audioTrack ? { audioTrack: options.audioTrack } : {}),
+    ...(options?.isPreview ? { isPreview: true } : {}),
   };
 }

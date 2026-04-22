@@ -41,6 +41,9 @@ importers:
       '@xyflow/react':
         specifier: ^12.10.1
         version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@xyflow/system':
+        specifier: ^0.0.75
+        version: 0.0.75
       bcryptjs:
         specifier: ^2.4.3
         version: 2.4.3
@@ -53,6 +56,9 @@ importers:
       bullmq:
         specifier: ^5.31.0
         version: 5.69.2
+      classcat:
+        specifier: ^5.0.3
+        version: 5.0.5
       cluster-key-slot:
         specifier: ^1.1.2
         version: 1.1.2

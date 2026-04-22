@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { Scene } from "@/lib/editorProjectTypes";
-import { clampDurationS } from "@/lib/sceneTiming";
+import { clampDurationS, MIN_SCENE_DURATION_S } from "@/lib/sceneTiming";
 
 interface SceneListProps {
   scenes: Scene[];
@@ -12,6 +12,7 @@ interface SceneListProps {
   onMove: (idx: number, dir: "up" | "down") => void;
   onRemove: (idx: number) => void;
   onDurationChange: (idx: number, duration: number) => void;
+  onTrimChange: (idx: number, trimStart: number, duration: number) => void;
   onAddScene: () => void;
   onReorder: (scenes: Scene[]) => void;
   onVideoDurationDetected?: (idx: number, naturalSecs: number) => void;
@@ -28,6 +29,7 @@ export function SceneList({
   onMove,
   onRemove,
   onDurationChange,
+  onTrimChange,
   onAddScene,
   onReorder,
   onVideoDurationDetected,
@@ -101,6 +103,7 @@ export function SceneList({
               onMoveDown={() => onMove(idx, "down")}
               onRemove={() => onRemove(idx)}
               onDurationChange={(d) => onDurationChange(idx, d)}
+              onTrimChange={(trimStart, dur) => onTrimChange(idx, trimStart, dur)}
               onVideoDurationDetected={onVideoDurationDetected ? (n) => onVideoDurationDetected(idx, n) : undefined}
               onDragStart={() => setDraggingIdx(idx)}
               onDragEnter={() => setHoverIdx(idx)}
@@ -164,6 +167,7 @@ interface SceneCardProps {
   onMoveDown: () => void;
   onRemove: () => void;
   onDurationChange: (duration: number) => void;
+  onTrimChange: (trimStart: number, duration: number) => void;
   onVideoDurationDetected?: (naturalSecs: number) => void;
   onDragStart: () => void;
   onDragEnter: () => void;
@@ -183,6 +187,7 @@ function SceneCard({
   onMoveDown,
   onRemove,
   onDurationChange,
+  onTrimChange,
   onVideoDurationDetected,
   onDragStart,
   onDragEnter,
@@ -202,7 +207,9 @@ function SceneCard({
     setEditingDuration(false);
   }
 
-  const src = artifactUrl(scene.src);
+  const src = scene.trimStart && scene.trimStart > 0
+    ? `${artifactUrl(scene.src)}#t=${scene.trimStart}`
+    : artifactUrl(scene.src);
 
   return (
     <div
@@ -337,6 +344,16 @@ function SceneCard({
         )}
       </div>
 
+      {/* Trim bar — video scenes only, once natural duration is known */}
+      {scene.type === "video" && scene.naturalDuration !== undefined && (
+        <TrimBar
+          trimStart={scene.trimStart ?? 0}
+          duration={scene.duration}
+          naturalDuration={scene.naturalDuration}
+          onTrimChange={onTrimChange}
+        />
+      )}
+
       {/* Controls row */}
       <div
         style={{
@@ -429,6 +446,130 @@ function SceneCard({
           </svg>
         </IconButton>
       </div>
+    </div>
+  );
+}
+
+// ── Trim bar ─────────────────────────────────────────────────────────────────
+
+function TrimBar({
+  trimStart,
+  duration,
+  naturalDuration,
+  onTrimChange,
+}: {
+  trimStart: number;
+  duration: number;
+  naturalDuration: number;
+  onTrimChange: (trimStart: number, duration: number) => void;
+}) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const startFrac = trimStart / naturalDuration;
+  const endFrac = Math.min((trimStart + duration) / naturalDuration, 1);
+
+  function makeDragHandler(handle: "left" | "right") {
+    return (e: React.PointerEvent<HTMLDivElement>) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const el = e.currentTarget;
+      el.setPointerCapture(e.pointerId);
+
+      function onMove(ev: PointerEvent) {
+        const bar = barRef.current;
+        if (!bar) return;
+        const rect = bar.getBoundingClientRect();
+        const frac = Math.max(0, Math.min((ev.clientX - rect.left) / rect.width, 1));
+        const sec = frac * naturalDuration;
+        if (handle === "left") {
+          const trimEnd = trimStart + duration;
+          const newStart = Math.max(0, Math.min(sec, trimEnd - MIN_SCENE_DURATION_S));
+          const rounded = Math.round(newStart * 10) / 10;
+          onTrimChange(rounded, clampDurationS(trimEnd - rounded));
+        } else {
+          const newEnd = Math.min(naturalDuration, Math.max(sec, trimStart + MIN_SCENE_DURATION_S));
+          const rounded = Math.round(newEnd * 10) / 10;
+          onTrimChange(trimStart, clampDurationS(rounded - trimStart));
+        }
+      }
+
+      function onUp() {
+        el.removeEventListener("pointermove", onMove);
+        el.removeEventListener("pointerup", onUp);
+      }
+
+      el.addEventListener("pointermove", onMove);
+      el.addEventListener("pointerup", onUp);
+    };
+  }
+
+  return (
+    <div
+      ref={barRef}
+      draggable={false}
+      aria-label={`Trim: ${trimStart.toFixed(1)}s – ${(trimStart + duration).toFixed(1)}s`}
+      style={{
+        position: "relative",
+        height: 6,
+        backgroundColor: "var(--color-border)",
+        flexShrink: 0,
+        overflow: "visible",
+      }}
+    >
+      {/* Selected trim region */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          bottom: 0,
+          left: `${startFrac * 100}%`,
+          width: `${(endFrac - startFrac) * 100}%`,
+          backgroundColor: "var(--color-accent)",
+          opacity: 0.45,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Left handle */}
+      <div
+        role="slider"
+        aria-label="Trim start"
+        aria-valuemin={0}
+        aria-valuemax={naturalDuration}
+        aria-valuenow={trimStart}
+        onPointerDown={makeDragHandler("left")}
+        style={{
+          position: "absolute",
+          top: -1,
+          bottom: -1,
+          left: `${startFrac * 100}%`,
+          width: 7,
+          transform: "translateX(-50%)",
+          backgroundColor: "var(--color-accent)",
+          cursor: "ew-resize",
+          borderRadius: "2px 0 0 2px",
+          zIndex: 2,
+        }}
+      />
+      {/* Right handle */}
+      <div
+        role="slider"
+        aria-label="Trim end"
+        aria-valuemin={0}
+        aria-valuemax={naturalDuration}
+        aria-valuenow={trimStart + duration}
+        onPointerDown={makeDragHandler("right")}
+        style={{
+          position: "absolute",
+          top: -1,
+          bottom: -1,
+          left: `${endFrac * 100}%`,
+          width: 7,
+          transform: "translateX(-50%)",
+          backgroundColor: "var(--color-accent)",
+          cursor: "ew-resize",
+          borderRadius: "0 2px 2px 0",
+          zIndex: 2,
+        }}
+      />
     </div>
   );
 }

@@ -35,12 +35,13 @@ interface DbTemplateMeta {
 
 import socialContentPipeline from "../../../../../templates/packs/social-content-pipeline.json";
 import imageGenStarter from "../../../../../templates/packs/image-gen-starter.json";
+import videoCreationStarters from "../../../../../templates/packs/video-creation-starters.json";
 
 let packsRegistered = false;
 function ensurePacksLoaded() {
   if (packsRegistered) return;
   packsRegistered = true;
-  registerBuiltInPacks([imageGenStarter, socialContentPipeline]);
+  registerBuiltInPacks([imageGenStarter, socialContentPipeline, videoCreationStarters]);
   rehydratePersistedPacks();
 }
 

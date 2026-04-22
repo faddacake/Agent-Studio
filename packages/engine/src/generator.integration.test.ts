@@ -331,17 +331,12 @@ describe("executeBestOfN with injected generator", () => {
 
   it("injection falls back gracefully when __generator is not a valid adapter", async () => {
     // If the injected value lacks .generate(), resolveGenerator falls through
-    // to createGenerator(), which without FAL_API_KEY returns MockGeneratorAdapter.
-    const savedKey = process.env.FAL_API_KEY;
-    delete process.env.FAL_API_KEY;
-
+    // to createGenerator().  provider:"mock" avoids needing a real API key.
     const result = await executeBestOfN(
-      makeBonCtx({ n: 2, k: 1, __generator: "not-an-adapter" }, "fallback test"),
+      makeBonCtx({ n: 2, k: 1, provider: "mock", __generator: "not-an-adapter" }, "fallback test"),
       {} as never,
     );
 
     assert.equal(result.metadata?.generatorKind, "mock", "should fall back to mock");
-
-    if (savedKey !== undefined) process.env.FAL_API_KEY = savedKey;
   });
 });

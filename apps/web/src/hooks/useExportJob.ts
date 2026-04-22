@@ -4,7 +4,8 @@
  * useExportJob — trigger and observe a single export job execution.
  *
  * Flow (with polling):
- *   1. trigger() → POST /api/editor-projects/[projectId]/export → { jobId }
+ *   1. trigger(opts?) → POST /api/editor-projects/[projectId]/export → { jobId }
+ *      Pass { preview: true } to request a fast low-resolution proxy render.
  *   2. GET /api/export-jobs/[jobId] → ExportJobStatusResponse
  *   3a. If terminal (completed/failed) → surface status; state becomes "done".
  *   3b. If non-terminal (pending/running) → schedule another GET after
@@ -29,6 +30,9 @@ export type ExportJobHookState =
   | "done"       // job reached a terminal state (completed or failed)
   | "error";     // network/server error
 
+/** Whether the active job is a fast proxy render or a full-quality export. */
+export type ExportMode = "preview" | "full";
+
 export interface UseExportJobResult {
   /** Current lifecycle state of the trigger+fetch flow. */
   state: ExportJobHookState;
@@ -36,8 +40,12 @@ export interface UseExportJobResult {
   jobStatus: ExportJobStatusResponse | null;
   /** Error message when state is "error". */
   error: string | null;
+  /** Whether the active/last job was a preview or full export. Null when idle. */
+  exportMode: ExportMode | null;
+  /** Unix timestamp (ms) when trigger() was called. Used for ETR estimation. */
+  startedAt: number | null;
   /** Trigger the export: POST to create, then poll until terminal. */
-  trigger: () => Promise<void>;
+  trigger: (opts?: { preview?: boolean }) => Promise<void>;
   /** Reset to idle so the user can trigger again. */
   reset: () => void;
 }
@@ -50,6 +58,8 @@ export function useExportJob(
   const [state, setState] = useState<ExportJobHookState>("idle");
   const [jobStatus, setJobStatus] = useState<ExportJobStatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exportMode, setExportMode] = useState<ExportMode | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
 
   // Holds the id of any pending poll timeout so it can be cancelled.
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -64,17 +74,25 @@ export function useExportJob(
   // Cancel any in-flight poll on unmount so stale state updates are avoided.
   useEffect(() => () => stopPolling(), [stopPolling]);
 
-  const trigger = useCallback(async () => {
+  const trigger = useCallback(async (opts?: { preview?: boolean }) => {
     // Cancel any polling loop left over from a previous trigger call.
     stopPolling();
     setState("triggering");
     setError(null);
     setJobStatus(null);
 
+    const mode: ExportMode = opts?.preview ? "preview" : "full";
+    setExportMode(mode);
+    setStartedAt(Date.now());
+
     // ── Step 1: create the export job ────────────────────────────────────────
+    const endpoint = opts?.preview
+      ? `/api/editor-projects/${projectId}/export?preview=true`
+      : `/api/editor-projects/${projectId}/export`;
+
     let jobId: string;
     try {
-      const createRes = await fetch(`/api/editor-projects/${projectId}/export`, {
+      const createRes = await fetch(endpoint, {
         method: "POST",
       });
       if (!createRes.ok) {
@@ -121,7 +139,9 @@ export function useExportJob(
     setState("idle");
     setJobStatus(null);
     setError(null);
+    setExportMode(null);
+    setStartedAt(null);
   }, [stopPolling]);
 
-  return { state, jobStatus, error, trigger, reset };
+  return { state, jobStatus, error, exportMode, startedAt, trigger, reset };
 }

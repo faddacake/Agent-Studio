@@ -42,7 +42,9 @@ function makeBonCtx(
     nodeId:    crypto.randomUUID(),
     runId:     "bon-" + crypto.randomUUID().slice(0, 8),
     inputs:    prompt ? { prompt_in: prompt } : {},
-    params,
+    // Default to "mock" so tests run without a real API key.
+    // Individual tests can override by passing provider in params.
+    params:    { provider: "mock", ...params },
     outputDir: OUTPUT_DIR,
   };
 }

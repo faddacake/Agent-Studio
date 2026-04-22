@@ -42,7 +42,7 @@ export interface SceneEntry {
   transition: "cut" | "fade";
   /**
    * Effective fade duration in ms.
-   * 0 for cut transitions, 0 for the last scene, capped at 50 % of durationMs.
+   * 0 for cut transitions, 0 for the last scene, capped at 80 % of durationMs.
    * Computed via `effectiveFadeDurationMs` — no new rules here.
    */
   fadeDurationMs: number;
@@ -63,6 +63,14 @@ export interface SceneEntry {
    * scenes whose metadata has not yet been loaded.
    */
   naturalDurationMs: number | null;
+
+  // ── Trim ─────────────────────────────────────────────────────────────────────
+  /**
+   * Trim start offset in ms — where in the source clip playback begins.
+   * null means from the clip start (equivalent to 0). Only set for video scenes
+   * where the user has explicitly trimmed the start.
+   */
+  trimStartMs: number | null;
 }
 
 // ── Plan shape ────────────────────────────────────────────────────────────────
@@ -111,6 +119,8 @@ export function buildRenderPlan(scenes: Scene[]): RenderPlan {
       textOverlay: scene.textOverlay ?? null,
       naturalDurationMs:
         scene.naturalDuration !== undefined ? scene.naturalDuration * 1000 : null,
+      trimStartMs:
+        scene.trimStart !== undefined && scene.trimStart > 0 ? scene.trimStart * 1000 : null,
     };
   });
 

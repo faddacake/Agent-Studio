@@ -92,7 +92,7 @@ function buildBonOnlyWorkflow(params: Record<string, unknown>): {
     position: { x: 0, y: 0 },
     data: {
       label:     "Best of N",
-      params:    { __nodeType: "best-of-n", ...params },
+      params:    { __nodeType: "best-of-n", provider: "mock", ...params },
       retryCount: 0,
       timeoutMs:  60000,
     },
@@ -309,7 +309,7 @@ describe("best-of-n node receives prompt from upstream node via coordinator wiri
       position: { x: 200, y: 0 },
       data: {
         label:     "Best of N",
-        params:    { __nodeType: "best-of-n", n: 3, k: 2 },
+        params:    { __nodeType: "best-of-n", provider: "mock", n: 3, k: 2 },
         retryCount: 0,
         timeoutMs:  60000,
       },
@@ -543,7 +543,7 @@ describe("full pipeline: best-of-n → social-format → export-bundle via coord
         position: { x: 0, y: 0 },
         data: {
           label:     "Best of N",
-          params:    { __nodeType: "best-of-n", n: 4, k: 2 },
+          params:    { __nodeType: "best-of-n", provider: "mock", n: 4, k: 2 },
           retryCount: 0,
           timeoutMs:  60000,
         },

@@ -22,10 +22,11 @@ import { ExportJobPayloadSchema } from "@aistudio/shared";
 import { enqueueExportJob } from "@/lib/queues/exportJobsQueue";
 
 export async function POST(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  const isPreview = request.nextUrl.searchParams.get("preview") === "true";
 
   const project = getEditorProject(id);
   if (!project) {
@@ -40,7 +41,10 @@ export async function POST(
   }
 
   const plan = buildRenderPlan(project.scenes);
-  const payload = buildExportPayload(plan, project.id, project.aspectRatio);
+  const payload = buildExportPayload(plan, project.id, project.aspectRatio, {
+    isPreview,
+    audioTrack: project.audioTrack ?? null,
+  });
 
   // Validate the derived payload against the canonical schema.
   // A parse failure here would indicate a logic bug in the builder.

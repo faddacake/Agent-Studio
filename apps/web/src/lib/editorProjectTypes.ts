@@ -38,6 +38,13 @@ export interface Scene {
    * playback window.
    */
   naturalDuration?: number;
+  /**
+   * Trim start offset in seconds — where in the source clip playback begins.
+   * Defaults to 0 (from clip start). Only meaningful for video scenes.
+   * The trim window is [trimStart, trimStart + duration]; constrained to
+   * [0, naturalDuration - duration].
+   */
+  trimStart?: number;
   textOverlay?: TextOverlay;
   /** Simple cut-or-fade transition into the next scene. */
   transition?: "cut" | "fade";

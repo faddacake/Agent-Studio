@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import type { AspectRatio, EditorProject, Scene, TextOverlay } from "@/lib/editorProjectTypes";
 import type { ArtifactRef } from "@aistudio/shared";
 import { afterRemove, afterMove, afterReorder, afterDurationEdit, resolvePlayStart, resolveReplay, resolveActiveId } from "@/lib/playbackCoherence";
-import { totalDurationMs, sceneStartMs, activeSceneIndex, clampDurationS } from "@/lib/sceneTiming";
+import { totalDurationMs, sceneStartMs, activeSceneIndex, clampDurationS, DEFAULT_VIDEO_DURATION_S, DEFAULT_IMAGE_DURATION_S } from "@/lib/sceneTiming";
 import { buildRenderPlan } from "@/lib/renderPlan";
 import { EditorToolbar } from "./EditorToolbar";
 import { SceneList } from "./SceneList";
@@ -14,7 +14,7 @@ import { ArtifactPickerModal } from "./ArtifactPickerModal";
 import { ArtifactPreviewPanel } from "@/components/prompt/ArtifactPreviewPanel";
 import type { SaveState } from "./EditorToolbar";
 import { useExportJob } from "@/hooks/useExportJob";
-import { hasRenderResult, toArtifactPreviewable } from "@/lib/exportJobStatus";
+import { hasRenderResult, toArtifactPreviewable, formatDurationMs } from "@/lib/exportJobStatus";
 
 interface EditorShellProps {
   project: EditorProject;
@@ -30,7 +30,20 @@ export function EditorShell({ project }: EditorShellProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [isDirty, setIsDirty] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const { state: exportState, jobStatus: exportJobStatus, error: exportError, trigger: triggerExport, reset: resetExport } = useExportJob(project.id);
+  const [audioPickerOpen, setAudioPickerOpen] = useState(false);
+  const [audioTrack, setAudioTrack] = useState<import("@/lib/editorProjectTypes").AudioTrack | null>(
+    project.audioTrack ?? null,
+  );
+  // Default to true when any existing scene already has a text overlay so captions
+  // are visible on projects that already have overlay data.
+  const [autoCaptionsEnabled, setAutoCaptionsEnabled] = useState(
+    () => project.scenes.some((s) => !!s.textOverlay),
+  );
+  const [voiceoverLoading, setVoiceoverLoading] = useState(false);
+  const [voiceoverError, setVoiceoverError] = useState<string | null>(null);
+  const [voiceoverSuccess, setVoiceoverSuccess] = useState(false);
+  const { state: exportState, jobStatus: exportJobStatus, error: exportError, exportMode, startedAt, trigger: triggerExport, reset: resetExport } = useExportJob(project.id);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playIndex, setPlayIndex] = useState(0);
   const [seekOffsetMs, setSeekOffsetMs] = useState(0); // intra-scene offset set by seek; 0 on normal play/advance
@@ -168,13 +181,52 @@ export function EditorShell({ project }: EditorShellProps) {
       if (!scene || scene.type !== "video" || scene.naturalDuration !== undefined) return prev;
       const natural = clampDurationS(naturalSecs);
       const next = [...prev];
-      // Adopt natural duration only if the scene is still at the video default (10 s)
-      const duration = scene.duration === 10 ? natural : scene.duration;
+      // Adopt natural duration only if the scene is still at the placeholder default.
+      // If the user already edited the duration, leave it untouched.
+      const duration = scene.duration === DEFAULT_VIDEO_DURATION_S ? natural : scene.duration;
       next[idx] = { ...scene, naturalDuration: natural, duration };
       return next;
     });
     setIsDirty(true);
   }, []);
+
+  /**
+   * Called when the user drags a trim handle on a scene card (SceneList) or the
+   * inspector trim bar. Updates both trimStart and duration simultaneously.
+   */
+  const handleTrimChange = useCallback((idx: number, trimStart: number, duration: number) => {
+    setScenes((prev) => {
+      const next = [...prev];
+      const scene = next[idx];
+      if (scene) {
+        next[idx] = {
+          ...scene,
+          trimStart: trimStart > 0 ? trimStart : undefined,
+          duration,
+        };
+      }
+      return next;
+    });
+    const { seekOffsetMs: newSeek } = afterDurationEdit({ playIndex, seekOffsetMs }, idx, duration);
+    if (newSeek !== seekOffsetMs) setSeekOffsetMs(newSeek);
+    setIsDirty(true);
+  }, [playIndex, seekOffsetMs]);
+
+  /** Trim change for the selected scene (SceneInspector). */
+  const handleSceneTrimChange = useCallback((trimStart: number, duration: number) => {
+    const editedIdx = scenes.findIndex((s) => s.id === selectedScene?.id);
+    setScenes((prev) =>
+      prev.map((s) => {
+        if (s.id !== selectedScene?.id) return s;
+        return { ...s, trimStart: trimStart > 0 ? trimStart : undefined, duration };
+      }),
+    );
+    if (editedIdx >= 0) {
+      const { seekOffsetMs: newSeek } = afterDurationEdit({ playIndex, seekOffsetMs }, editedIdx, duration);
+      if (newSeek !== seekOffsetMs) setSeekOffsetMs(newSeek);
+    }
+    setIsDirty(true);
+  }, [selectedScene?.id, scenes, playIndex, seekOffsetMs]);
 
   const handleReorderScenes = useCallback((newScenes: Scene[]) => {
     const { playIndex: newIdx } = afterReorder(scenes, { playIndex, seekOffsetMs }, newScenes);
@@ -283,13 +335,111 @@ export function EditorShell({ project }: EditorShellProps) {
       id: crypto.randomUUID(),
       type: isVideo ? "video" : "image",
       src: ref.path,
-      duration: isVideo ? 10 : 5,
+      // Video gets a placeholder that handleVideoDurationDetected will correct once
+      // the thumbnail's metadata loads; image gets a sensible display window.
+      duration: isVideo ? DEFAULT_VIDEO_DURATION_S : DEFAULT_IMAGE_DURATION_S,
     };
     setScenes((prev) => [...prev, newScene]);
     setSelectedId(newScene.id);
     setIsDirty(true);
     setPickerOpen(false);
   }, []);
+
+  // ── Audio track ───────────────────────────────────────────────────────────
+
+  const handleAudioChange = useCallback(
+    (track: import("@/lib/editorProjectTypes").AudioTrack | null) => {
+      setAudioTrack(track);
+      setIsDirty(true);
+      // When the track is removed, clear any stale voiceover feedback state so
+      // the next "Generate Voiceover" attempt starts with a clean UI.
+      if (!track) {
+        setVoiceoverError(null);
+        setVoiceoverSuccess(false);
+      }
+    },
+    [],
+  );
+
+  const handleAudioPicked = useCallback((ref: ArtifactRef) => {
+    setAudioTrack({ src: ref.path, volume: 1 });
+    setIsDirty(true);
+    setAudioPickerOpen(false);
+  }, []);
+
+  /**
+   * Toggle auto-captions mode.
+   * Enabling: bulk-applies an empty subtitle overlay to every scene that doesn't
+   * already have one, so users can quickly fill in caption text per scene.
+   * Disabling: non-destructive — existing overlays are left in place.
+   */
+  const handleToggleAutoCaptions = useCallback(() => {
+    const enabling = !autoCaptionsEnabled;
+    setAutoCaptionsEnabled(enabling);
+    if (enabling) {
+      setScenes((prev) =>
+        prev.map((scene) =>
+          scene.textOverlay
+            ? scene
+            : { ...scene, textOverlay: { text: "", position: "bottom" as const, style: "subtitle" as const } }
+        )
+      );
+      setIsDirty(true);
+    }
+  }, [autoCaptionsEnabled]);
+
+  // ── Voiceover generation ──────────────────────────────────────────────────
+
+  // Clear the "no captions" error as soon as the user adds caption text to any
+  // scene, so the error doesn't linger after they follow the instructions.
+  useEffect(() => {
+    if (!voiceoverError) return;
+    if (scenes.some((s) => s.textOverlay?.text?.trim())) setVoiceoverError(null);
+  }, [scenes, voiceoverError]);
+
+  const handleGenerateVoiceover = useCallback(async () => {
+    const hasCaptions = scenes.some((s) => s.textOverlay?.text?.trim());
+    if (!hasCaptions) {
+      setVoiceoverError("Add caption text to at least one scene first (CC → type in Scene inspector).");
+      return;
+    }
+    setVoiceoverLoading(true);
+    setVoiceoverError(null);
+    setVoiceoverSuccess(false);
+    try {
+      const res = await fetch(`/api/editor-projects/${project.id}/voiceover`, {
+        method: "POST",
+      });
+      const data = await res.json() as { audioTrack?: import("@/lib/editorProjectTypes").AudioTrack; message?: string };
+      if (!res.ok) {
+        setVoiceoverError(data.message ?? "Voiceover generation failed.");
+        return;
+      }
+      if (data.audioTrack) {
+        setAudioTrack(data.audioTrack);
+        // The voiceover route already persists audioTrack to the DB — no need to
+        // mark the project dirty here.  Any other unsaved changes (scene edits, etc.)
+        // remain dirty as before.
+        setVoiceoverSuccess(true);
+        // Auto-dismiss the success badge after 3 s.
+        setTimeout(() => setVoiceoverSuccess(false), 3000);
+        // Enable captions so they're visible during the auto-play preview —
+        // the user already authored them to drive the TTS.
+        setAutoCaptionsEnabled(true);
+        // Auto-play from the beginning so the user immediately hears the new voiceover.
+        if (scenes.length > 0) {
+          setPlayIndex(0);
+          setSeekOffsetMs(0);
+          setPlayEpoch((e) => e + 1);
+          setIsPlaying(true);
+        }
+      }
+    } catch {
+      setVoiceoverError("Network error — could not reach voiceover endpoint.");
+    } finally {
+      setVoiceoverLoading(false);
+    }
+  }, [project.id, scenes]);
 
   // ── Save ──────────────────────────────────────────────────────────────────
 
@@ -299,7 +449,7 @@ export function EditorShell({ project }: EditorShellProps) {
       const res = await fetch(`/api/editor-projects/${project.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: projectName, aspectRatio, scenes }),
+        body: JSON.stringify({ name: projectName, aspectRatio, scenes, audioTrack }),
       });
       if (!res.ok) throw new Error(`${res.status}`);
       setSaveState("saved");
@@ -308,7 +458,7 @@ export function EditorShell({ project }: EditorShellProps) {
     } catch {
       setSaveState("error");
     }
-  }, [project.id, projectName, aspectRatio, scenes]);
+  }, [project.id, projectName, aspectRatio, scenes, audioTrack]);
 
   // ── Playback keyboard shortcuts (Space / ArrowLeft / ArrowRight) ──────────
 
@@ -362,19 +512,54 @@ export function EditorShell({ project }: EditorShellProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [exportState, triggerExport]);
 
-  // ── Escape: dismiss completed export status ───────────────────────────────
+  // ── Escape: dismiss completed export status or preview modal ─────────────
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key !== "Escape" || exportState !== "done") return;
+      if (e.key !== "Escape") return;
       const target = e.target as HTMLElement;
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      if (previewModalOpen) {
+        e.preventDefault();
+        setPreviewModalOpen(false);
+        return;
+      }
+      if (exportState !== "done") return;
       e.preventDefault();
       resetExport();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [exportState, resetExport]);
+  }, [exportState, resetExport, previewModalOpen]);
+
+  // ── Cmd/Ctrl+Shift+E: trigger preview render ──────────────────────────────
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || !e.shiftKey || e.key !== "E") return;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+      e.preventDefault();
+      if (exportState === "triggering" || exportState === "fetching") return;
+      triggerExport({ preview: true });
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [exportState, triggerExport]);
+
+  // ── Auto-open preview modal on preview job completion ─────────────────────
+
+  useEffect(() => {
+    if (
+      exportMode === "preview" &&
+      exportState === "done" &&
+      exportJobStatus !== null &&
+      hasRenderResult(exportJobStatus) &&
+      exportJobStatus.renderResult.artifacts.length > 0
+    ) {
+      setPreviewModalOpen(true);
+    }
+  }, [exportMode, exportState, exportJobStatus]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -403,8 +588,13 @@ export function EditorShell({ project }: EditorShellProps) {
         exportState={exportState}
         exportJobStatus={exportJobStatus}
         exportError={exportError}
+        exportMode={exportMode}
+        startedAt={startedAt}
         onExport={triggerExport}
+        onPreview={() => triggerExport({ preview: true })}
         onExportReset={resetExport}
+        projectDurationMs={totalDurationMs(scenes)}
+        hasAudio={!!audioTrack}
       />
 
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
@@ -415,6 +605,7 @@ export function EditorShell({ project }: EditorShellProps) {
           onMove={handleMoveScene}
           onRemove={handleRemoveScene}
           onDurationChange={handleDurationChange}
+          onTrimChange={handleTrimChange}
           onAddScene={() => setPickerOpen(true)}
           onReorder={handleReorderScenes}
           onVideoDurationDetected={handleVideoDurationDetected}
@@ -436,9 +627,18 @@ export function EditorShell({ project }: EditorShellProps) {
           onScrubEnd={handleScrubEnd}
           isLooping={isLooping}
           onToggleLoop={handleToggleLoop}
+          audioTrack={audioTrack}
+          onAudioChange={handleAudioChange}
+          onAudioLoad={() => setAudioPickerOpen(true)}
+          autoCaptionsEnabled={autoCaptionsEnabled}
+          onToggleAutoCaptions={handleToggleAutoCaptions}
+          onGenerateVoiceover={handleGenerateVoiceover}
+          voiceoverLoading={voiceoverLoading}
+          voiceoverError={voiceoverError}
+          voiceoverSuccess={voiceoverSuccess}
         />
-        {/* Right column: export artifact panel when done with output; scene inspector otherwise */}
-        {exportState === "done" && exportJobStatus !== null && hasRenderResult(exportJobStatus) && exportJobStatus.renderResult.artifacts.length > 0 ? (
+        {/* Right column: full export artifact panel when done; preview uses a modal instead */}
+        {exportMode === "full" && exportState === "done" && exportJobStatus !== null && hasRenderResult(exportJobStatus) && exportJobStatus.renderResult.artifacts.length > 0 ? (
           <div
             style={{
               width: 360,
@@ -462,10 +662,23 @@ export function EditorShell({ project }: EditorShellProps) {
           selectedScene && (
             <SceneInspector
               scene={selectedScene}
+              hasNextScene={
+                scenes.findIndex((s) => s.id === selectedScene.id) < scenes.length - 1
+              }
               onDurationChange={handleSceneDurationChange}
+              onAutoDuration={
+                selectedScene.type === "video" && selectedScene.naturalDuration !== undefined
+                  ? () => handleSceneDurationChange(selectedScene.naturalDuration!)
+                  : undefined
+              }
               onTransitionChange={handleSceneTransitionChange}
               onFadeDurationChange={handleFadeDurationChange}
               onOverlayChange={handleOverlayChange}
+              onTrimChange={
+                selectedScene.type === "video" && selectedScene.naturalDuration !== undefined
+                  ? handleSceneTrimChange
+                  : undefined
+              }
             />
           )
         )}
@@ -476,6 +689,86 @@ export function EditorShell({ project }: EditorShellProps) {
           onPick={handleAddScene}
           onClose={() => setPickerOpen(false)}
         />
+      )}
+
+      {audioPickerOpen && (
+        <ArtifactPickerModal
+          onPick={handleAudioPicked}
+          onClose={() => setAudioPickerOpen(false)}
+        />
+      )}
+
+      {/* Preview render modal — auto-opens when a preview job completes */}
+      {previewModalOpen && exportJobStatus !== null && hasRenderResult(exportJobStatus) && exportJobStatus.renderResult.artifacts.length > 0 && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Preview render"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 50,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.72)",
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) setPreviewModalOpen(false); }}
+        >
+          <div
+            style={{
+              position: "relative",
+              backgroundColor: "var(--color-bg-secondary)",
+              border: "1px solid var(--color-border)",
+              borderRadius: 12,
+              padding: 20,
+              maxWidth: "min(720px, 92vw)",
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>
+                Preview Render
+                <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 400, color: "var(--color-text-muted)" }}>
+                  {exportJobStatus.renderResult.sceneCount} scenes ·{" "}
+                  {formatDurationMs(exportJobStatus.renderResult.totalDurationMs)}
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setPreviewModalOpen(false)}
+                aria-label="Close preview"
+                title="Close (Esc)"
+                style={{
+                  fontSize: 14,
+                  lineHeight: 1,
+                  padding: "4px 8px",
+                  borderRadius: 5,
+                  border: "1px solid var(--color-border)",
+                  background: "transparent",
+                  color: "var(--color-text-muted)",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Artifacts */}
+            {exportJobStatus.renderResult.artifacts.map((artifact) => (
+              <ArtifactPreviewPanel
+                key={artifact.path}
+                result={toArtifactPreviewable(artifact)}
+                label="Preview Output"
+                highlighted={false}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

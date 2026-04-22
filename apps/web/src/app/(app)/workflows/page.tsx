@@ -3,6 +3,31 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { WelcomeScreen } from "@/components/onboarding/WelcomeScreen";
+
+// ── Quick-start template metadata (displayed on the dashboard above the project list) ──
+// Descriptions and icons intentionally duplicated from WelcomeScreen so the dashboard
+// is self-contained and WelcomeScreen.tsx doesn't need to be modified.
+const QUICK_TEMPLATE_META = [
+  {
+    key: "quick-social-reel" as const,
+    icon: "🎬",
+    name: "Quick Social Reel",
+    description: "Prompt → 9:16 image → 5-second video clip.",
+  },
+  {
+    key: "product-promo" as const,
+    icon: "📦",
+    name: "Product Promo",
+    description: "4 image variants, best-of-N scoring, social captions, export.",
+  },
+  {
+    key: "story-highlight" as const,
+    icon: "🎞",
+    name: "Story Highlight",
+    description: "Two parallel scene tracks (A & B), each image → video.",
+  },
+] as const;
 
 interface Workflow {
   id: string;
@@ -36,6 +61,12 @@ export default function WorkflowsPage() {
   const [newDesc, setNewDesc] = useState("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  // hadAny tracks whether this user has ever had workflows, distinguishing
+  // first-time visitors (show WelcomeScreen) from returning users who deleted
+  // all workflows (show plain empty state).  Written by fetchWorkflows at line ~204.
+  const [hadAny, setHadAny] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("aiStudio.workflow.hadAny") === "1",
+  );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
@@ -58,9 +89,15 @@ export default function WorkflowsPage() {
   const [descSaving, setDescSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [starterKey, setStarterKey] = useState<"blank" | "image" | "text" | "template">("blank");
+  // Tracks which quick-start template card is mid-creation so we can show a per-card spinner.
+  const [quickStartKey, setQuickStartKey] = useState<string | null>(null);
+  const [starterKey, setStarterKey] = useState<"blank" | "image" | "text" | "quick-social-reel" | "product-promo" | "story-highlight" | "template">("blank");
   const [templates, setTemplates] = useState<WorkflowTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+  const [hasNoProviders, setHasNoProviders] = useState(false);
+  const [providerBannerDismissed, setProviderBannerDismissed] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("aiStudio.noProviderBanner.dismissed") === "1",
+  );
   const [savingTemplateId, setSavingTemplateId] = useState<string | null>(null);
   const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null);
   const [templateRenameInput, setTemplateRenameInput] = useState("");
@@ -212,6 +249,13 @@ export default function WorkflowsPage() {
   }, []);
 
   useEffect(() => { fetchWorkflows(); fetchTemplates(); }, [fetchWorkflows, fetchTemplates]);
+
+  useEffect(() => {
+    fetch("/api/providers")
+      .then((r) => r.ok ? r.json() : [])
+      .then((rows: unknown[]) => setHasNoProviders(rows.length === 0))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!openMenuId) return;
@@ -417,7 +461,78 @@ export default function WorkflowsPage() {
         { id: "e1", source: "tpl-1", target: "out-1", sourceHandle: "text_out", targetHandle: "input" },
       ],
     },
+    "quick-social-reel": {
+      version: 1,
+      nodes: [
+        { id: "qsr-1", type: "prompt-template", data: { label: "Scene Prompt", params: { template: "A cinematic {{style}} shot of {{subject}}, high quality, vivid colors" } }, position: { x: 80, y: 160 } },
+        { id: "qsr-2", type: "image-generation", data: { label: "Image Generation", params: { width: 576, height: 1024, num_inference_steps: 28, guidance_scale: 7.5, seed: -1 } }, position: { x: 380, y: 160 } },
+        { id: "qsr-3", type: "video-generation", data: { label: "Video Generation", params: { duration: 5, resolution: "720p", seed: -1 } }, position: { x: 700, y: 160 } },
+      ],
+      edges: [
+        { id: "qsr-e1", source: "qsr-1", target: "qsr-2", sourceHandle: "text_out", targetHandle: "prompt_in" },
+        { id: "qsr-e2", source: "qsr-1", target: "qsr-3", sourceHandle: "text_out", targetHandle: "prompt_in" },
+        { id: "qsr-e3", source: "qsr-2", target: "qsr-3", sourceHandle: "image_out", targetHandle: "image_in" },
+      ],
+    },
+    "product-promo": {
+      version: 1,
+      nodes: [
+        { id: "pp-1", type: "prompt-template", data: { label: "Product Prompt", params: { template: "A professional product photo of {{product}}, studio lighting, clean background" } }, position: { x: 80, y: 160 } },
+        { id: "pp-2", type: "best-of-n", data: { label: "Best of N (4 variants)", params: { n: 4, k: 1, provider: "mock", model: "mock-sdxl" } }, position: { x: 380, y: 160 } },
+        { id: "pp-3", type: "social-format", data: { label: "Social Format", params: { platforms: ["instagram", "x", "linkedin"], tone: "professional", includeHashtags: true, includeCTA: true } }, position: { x: 700, y: 160 } },
+        { id: "pp-4", type: "export-bundle", data: { label: "Export Bundle", params: { format: "manifest-only", includeImages: true, includeMetadata: true, includeSocialText: true, includeScores: true } }, position: { x: 1020, y: 160 } },
+      ],
+      edges: [
+        { id: "pp-e1", source: "pp-1", target: "pp-2", sourceHandle: "text_out", targetHandle: "prompt_in" },
+        { id: "pp-e2", source: "pp-2", target: "pp-3", sourceHandle: "selection_out", targetHandle: "candidates_in" },
+        { id: "pp-e3", source: "pp-3", target: "pp-4", sourceHandle: "formatted_out", targetHandle: "candidates_in" },
+      ],
+    },
+    "story-highlight": {
+      version: 1,
+      nodes: [
+        { id: "sh-1", type: "prompt-template", data: { label: "Scene Prompt", params: { template: "A {{mood}} scene of {{setting}}, cinematic lighting, wide shot" } }, position: { x: 80, y: 200 } },
+        { id: "sh-2", type: "image-generation", data: { label: "Scene A — Image", params: { width: 1280, height: 720, seed: 42 } }, position: { x: 380, y: 60 } },
+        { id: "sh-3", type: "video-generation", data: { label: "Scene A — Video", params: { duration: 5, resolution: "720p", seed: 42 } }, position: { x: 700, y: 60 } },
+        { id: "sh-4", type: "image-generation", data: { label: "Scene B — Image", params: { width: 1280, height: 720, seed: 99 } }, position: { x: 380, y: 340 } },
+        { id: "sh-5", type: "video-generation", data: { label: "Scene B — Video", params: { duration: 5, resolution: "720p", seed: 99 } }, position: { x: 700, y: 340 } },
+      ],
+      edges: [
+        { id: "sh-e1", source: "sh-1", target: "sh-2", sourceHandle: "text_out", targetHandle: "prompt_in" },
+        { id: "sh-e2", source: "sh-1", target: "sh-4", sourceHandle: "text_out", targetHandle: "prompt_in" },
+        { id: "sh-e3", source: "sh-2", target: "sh-3", sourceHandle: "image_out", targetHandle: "image_in" },
+        { id: "sh-e4", source: "sh-4", target: "sh-5", sourceHandle: "image_out", targetHandle: "image_in" },
+      ],
+    },
   };
+
+  /** Create a workflow directly from a graph object and navigate to the canvas.
+   *  Used by the WelcomeScreen template cards and quick-start CTAs. */
+  async function createFromGraph(graph: object, name: string) {
+    if (creating) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/workflows", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, graph }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/workflows/${data.id}`);
+      } else {
+        setCreating(false);
+      }
+    } catch {
+      setCreating(false);
+    }
+  }
+
+  /** Dismiss the welcome screen permanently by marking the user as having had workflows. */
+  function handleDismissWelcome() {
+    localStorage.setItem("aiStudio.workflow.hadAny", "1");
+    setHadAny(true);
+  }
 
   async function handleCreate() {
     if (!newName.trim() || creating) return;
@@ -591,6 +706,11 @@ export default function WorkflowsPage() {
     });
   filteredRef.current = filtered;
   activeWorkflowIdRef.current = activeWorkflowId;
+
+  // True when the list is showing all workflows with no search or filter active.
+  // Used to decide whether to show the quick-start strip and "Recent Projects" heading.
+  const isUnfiltered =
+    !search.trim() && !activeTag && !pinnedOnly && !hasCheckpointsFilter && !hasProvenanceFilter;
 
   // Clear stale keyboard selection when the selected workflow is no longer in the filtered list
   if (keyboardWorkflowId && !filtered.some((w) => w.id === keyboardWorkflowId)) {
@@ -940,6 +1060,56 @@ export default function WorkflowsPage() {
         </div>
       </div>
 
+      {hasNoProviders && !providerBannerDismissed && !loading && (
+        <div
+          role="alert"
+          style={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 12,
+            padding: "12px 16px",
+            marginBottom: 20,
+            backgroundColor: "color-mix(in srgb, var(--color-accent) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--color-accent) 40%, transparent)",
+            borderRadius: 10,
+            color: "var(--color-text-primary)",
+            fontSize: 14,
+            lineHeight: 1.5,
+          }}
+        >
+          <span style={{ fontSize: 18, flexShrink: 0 }}>⚡</span>
+          <span style={{ flex: 1 }}>
+            <strong>No providers configured.</strong> Add an API key in{" "}
+            <Link
+              href="/settings/providers"
+              style={{ color: "var(--color-accent)", textDecoration: "underline" }}
+            >
+              Settings → Providers
+            </Link>{" "}
+            before running a workflow.
+          </span>
+          <button
+            aria-label="Dismiss no-providers banner"
+            onClick={() => {
+              localStorage.setItem("aiStudio.noProviderBanner.dismissed", "1");
+              setProviderBannerDismissed(true);
+            }}
+            style={{
+              flexShrink: 0,
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "var(--color-text-muted)",
+              fontSize: 16,
+              lineHeight: 1,
+              padding: "2px 4px",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {workflows.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: allTags.length > 0 ? 12 : 20 }}>
           <input
@@ -1106,53 +1276,51 @@ export default function WorkflowsPage() {
       {loading ? (
         <p style={{ color: "var(--color-text-muted)" }}>Loading...</p>
       ) : workflows.length === 0 ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "80px 20px",
-            border: "1px dashed var(--color-border)",
-            borderRadius: 12,
-            backgroundColor: "var(--color-surface)",
-          }}
-        >
-          {typeof window !== "undefined" && localStorage.getItem("aiStudio.workflow.hadAny") === "1" ? (
-            <>
-              <p style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 4 }}>
-                No workflows right now.
-              </p>
-              <p style={{ fontSize: 14, color: "var(--color-text-muted)", marginBottom: 20 }}>
-                You had workflows here before — create a new one to get started again.
-              </p>
-            </>
-          ) : (
-            <>
-              <p style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 4 }}>
-                No workflows yet.
-              </p>
-              <p style={{ fontSize: 14, color: "var(--color-text-muted)", marginBottom: 20 }}>
-                Create your first one to get started.
-              </p>
-            </>
-          )}
-          <button
-            onClick={() => setShowModal(true)}
+        hadAny ? (
+          /* Returning user who has no workflows — skip the welcome experience */
+          <div
             style={{
-              padding: "10px 22px",
-              backgroundColor: "var(--color-accent)",
-              color: "#fff",
-              border: "none",
-              borderRadius: 8,
-              fontSize: 14,
-              fontWeight: 600,
-              cursor: "pointer",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "80px 20px",
+              border: "1px dashed var(--color-border)",
+              borderRadius: 12,
+              backgroundColor: "var(--color-surface)",
             }}
           >
-            + New Workflow
-          </button>
-        </div>
+            <p style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 4 }}>
+              No workflows right now.
+            </p>
+            <p style={{ fontSize: 14, color: "var(--color-text-muted)", marginBottom: 20 }}>
+              You had workflows here before — create a new one to get started again.
+            </p>
+            <button
+              onClick={() => setShowModal(true)}
+              style={{
+                padding: "10px 22px",
+                backgroundColor: "var(--color-accent)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              + New Workflow
+            </button>
+          </div>
+        ) : (
+          /* First-time user — show the full welcome experience */
+          <WelcomeScreen
+            onCreateFromGraph={createFromGraph}
+            onOpenModal={() => setShowModal(true)}
+            onDismiss={handleDismissWelcome}
+            creating={creating}
+          />
+        )
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: "64px 20px" }}>
           <p aria-live="polite" aria-atomic="true" style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 16 }}>
@@ -1243,6 +1411,77 @@ export default function WorkflowsPage() {
         </div>
       ) : (
         <>
+        {/* ── Quick-start strip: shown only when no filter is active ── */}
+        {isUnfiltered && (
+          <div style={{ marginBottom: 28 }}>
+            <p style={{
+              fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+              letterSpacing: "0.07em", color: "var(--color-text-muted)",
+              margin: "0 0 10px",
+            }}>
+              New from Template
+            </p>
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              {QUICK_TEMPLATE_META.map((tpl) => {
+                const isCreatingThis = quickStartKey === tpl.key;
+                return (
+                  <div
+                    key={tpl.key}
+                    style={{
+                      flex: "1 1 0", minWidth: 180,
+                      padding: "14px 16px",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: 10,
+                      backgroundColor: "var(--color-surface)",
+                      display: "flex", flexDirection: "column", gap: 8,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ fontSize: 18 }} aria-hidden="true">{tpl.icon}</span>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)" }}>
+                        {tpl.name}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 12, color: "var(--color-text-muted)", margin: 0, lineHeight: 1.45, flexGrow: 1 }}>
+                      {tpl.description}
+                    </p>
+                    <button
+                      disabled={creating}
+                      aria-label={`Create a ${tpl.name} workflow`}
+                      onClick={async () => {
+                        const graph = STARTER_GRAPHS[tpl.key];
+                        if (!graph) return;
+                        setQuickStartKey(tpl.key);
+                        await createFromGraph(graph, tpl.name);
+                        setQuickStartKey(null); // only reached on API error
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!creating) e.currentTarget.style.backgroundColor = "var(--color-accent-hover)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "var(--color-accent)";
+                      }}
+                      style={{
+                        padding: "6px 12px",
+                        fontSize: 12, fontWeight: 600,
+                        backgroundColor: "var(--color-accent)",
+                        color: "#fff",
+                        border: "none", borderRadius: 7,
+                        cursor: creating ? "default" : "pointer",
+                        opacity: creating && !isCreatingThis ? 0.5 : 1,
+                        alignSelf: "flex-start",
+                        transition: "background-color 0.12s, opacity 0.12s",
+                      }}
+                    >
+                      {isCreatingThis ? "Creating…" : "Use Template"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <span
           aria-live="polite"
           aria-atomic="true"
@@ -1345,6 +1584,20 @@ export default function WorkflowsPage() {
               ⌘A · Esc
             </span>
           </div>
+        )}
+        {/* ── Section heading: "Recent Projects" or filter result count ── */}
+        {isUnfiltered ? (
+          <p style={{
+            fontSize: 11, fontWeight: 700, textTransform: "uppercase",
+            letterSpacing: "0.07em", color: "var(--color-text-muted)",
+            margin: "0 0 10px",
+          }}>
+            Recent Projects
+          </p>
+        ) : (
+          <p style={{ fontSize: 13, color: "var(--color-text-muted)", margin: "0 0 10px" }}>
+            {filtered.length} workflow{filtered.length !== 1 ? "s" : ""} found
+          </p>
         )}
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {filtered.map((w) => (
@@ -1660,13 +1913,12 @@ export default function WorkflowsPage() {
                   </span>
                 ) : (
                   <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <a
-                      href={`/workflows/${w.id}/history`}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ fontSize: 12, color: "var(--color-text-muted)", textDecoration: "none", padding: "2px 6px" }}
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push(`/workflows/${w.id}/history`); }}
+                      style={{ fontSize: 12, color: "var(--color-text-muted)", background: "none", border: "none", cursor: "pointer", padding: "2px 6px" }}
                     >
                       History
-                    </a>
+                    </button>
                     <span style={{ fontSize: 12, color: "var(--color-border)" }}>·</span>
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleRun(w.id); }}
@@ -1843,19 +2095,21 @@ export default function WorkflowsPage() {
               New Workflow
             </h2>
             {/* Starter template chooser */}
-            <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 20 }}>
               {(
                 [
                   { key: "blank", label: "Blank", icon: "◻", desc: "Empty canvas" },
-                  { key: "image", label: "Image generation", icon: "🖼", desc: "Prompt → generate → output" },
-                  { key: "text", label: "Text pipeline", icon: "✏", desc: "Template → text output" },
+                  { key: "image", label: "Image gen", icon: "🖼", desc: "Prompt → image → output" },
+                  { key: "text", label: "Text", icon: "✏", desc: "Template → text output" },
+                  { key: "quick-social-reel", label: "Social Reel", icon: "🎬", desc: "Prompt → image → video" },
+                  { key: "product-promo", label: "Product Promo", icon: "📦", desc: "Best-of-N → social → export" },
+                  { key: "story-highlight", label: "Story", icon: "🎞", desc: "Two-scene narrative" },
                 ] as const
               ).map(({ key, label, icon, desc }) => (
                 <button
                   key={key}
                   onClick={() => { setStarterKey(key); setSelectedTemplateId(null); }}
                   style={{
-                    flex: 1,
                     padding: "10px 8px",
                     backgroundColor: starterKey === key ? "rgba(var(--color-accent-rgb, 99,102,241),0.12)" : "var(--color-surface)",
                     border: starterKey === key ? "1.5px solid var(--color-accent)" : "1px solid var(--color-border)",

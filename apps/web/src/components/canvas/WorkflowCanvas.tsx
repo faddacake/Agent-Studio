@@ -42,6 +42,10 @@ import { buildExecutionSummaryMap } from "@/lib/nodeExecutionSummary";
 import { requestAutoRun, onAutoRunComplete } from "@/lib/runQueue";
 import { deriveWorkflowHealth, hasHealthSignals, type WorkflowHealthSummary } from "@/lib/workflowHealth";
 import { deriveExecutionPath } from "@/lib/executionPath";
+import { useBudgetSettings } from "@/hooks/useBudgetSettings";
+import { BudgetWarningModal } from "@/components/editor/BudgetWarningModal";
+import { BudgetSettingsPanel } from "@/components/settings/BudgetSettingsPanel";
+import { SchedulePanel } from "./SchedulePanel";
 
 // ── Node types map (stable reference) ──
 
@@ -142,6 +146,69 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
 
   const canUndo = historyStack.length > 0;
   const canRedo = redoStack.length > 0;
+
+  // ── Budget settings + pre-run cost check ─────────────────────────────────
+  const { budgetCap, setBudgetCap } = useBudgetSettings();
+  const [budgetWarning, setBudgetWarning] = useState<{ estimatedCost: number } | null>(null);
+  const [budgetPanelOpen, setBudgetPanelOpen] = useState(false);
+  const budgetBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [schedulePanelOpen, setSchedulePanelOpen] = useState(false);
+  const scheduleBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [scheduleActive, setScheduleActive] = useState(false);
+
+  // ── Schedule active state — drives indicator on Schedule button ──────────
+  // Fetches once when the workflow loads; updated in real-time via SchedulePanel.
+  useEffect(() => {
+    if (!meta?.id) return;
+    fetch(`/api/workflows/${meta.id}/schedule`)
+      .then((r) => r.ok ? r.json() : { schedule: null })
+      .then((data: { schedule: { enabled?: boolean } | null }) => {
+        setScheduleActive(data.schedule?.enabled === true);
+      })
+      .catch(() => {});
+  }, [meta?.id]);
+
+  // ── Provider availability check ───────────────────────────────────────────
+  // Re-checked on focus/visibility so that adding a provider in another tab
+  // immediately re-enables the Run button when the user returns to the canvas.
+  // Default true so the Run button starts disabled until the fetch resolves,
+  // avoiding a green flash → disabled transition on the no-provider first-visit path.
+  const [hasNoProviders, setHasNoProviders] = useState(true);
+  useEffect(() => {
+    function checkProviders() {
+      fetch("/api/providers")
+        .then((r) => r.ok ? r.json() : [])
+        .then((rows: unknown[]) => setHasNoProviders(rows.length === 0))
+        .catch(() => {});
+    }
+    checkProviders();
+    function onVisibility() { if (document.visibilityState === "visible") checkProviders(); }
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("focus", checkProviders);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("focus", checkProviders);
+    };
+  }, []);
+
+  const handleRun = useCallback(() => {
+    // Estimate cost from node definitions (registry must be initialized — idempotent).
+    initializeNodeRegistry();
+    let estimated = 0;
+    for (const node of nodes) {
+      const nodeType = (node.data as { nodeType?: string }).nodeType ?? "";
+      const def = nodeRegistry.get(nodeType);
+      if (def?.estimateCost) {
+        const params = (node.data as { params?: Record<string, unknown> }).params ?? {};
+        estimated += def.estimateCost(params).estimated;
+      }
+    }
+    if (estimated > budgetCap) {
+      setBudgetWarning({ estimatedCost: estimated });
+      return;
+    }
+    void runWorkflow({ budgetCap });
+  }, [nodes, budgetCap, runWorkflow]);
 
   // ── Execution-path edge styling ──────────────────────────────────────────
   // While a run is live, emphasize edges along the active execution path.
@@ -1228,20 +1295,56 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           >
             {exporting ? "Exporting…" : "Export"}
           </button>
+          {/* Budget settings trigger — turns amber/red after budget_exceeded runs */}
+          <div className="relative">
+            <button
+              ref={budgetBtnRef}
+              type="button"
+              onClick={() => { setSchedulePanelOpen(false); setBudgetPanelOpen((v) => !v); }}
+              title={
+                meta?.lastRunStatus === "budget_exceeded"
+                  ? `Last run hit budget cap ($${budgetCap.toFixed(2)}) — click to adjust`
+                  : `Budget cap: $${budgetCap.toFixed(2)} per run`
+              }
+              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                budgetPanelOpen
+                  ? "border-blue-600 bg-blue-600/10 text-blue-400"
+                  : meta?.lastRunStatus === "budget_exceeded"
+                  ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+              }`}
+              aria-haspopup="dialog"
+              aria-expanded={budgetPanelOpen}
+            >
+              {meta?.lastRunStatus === "budget_exceeded" && (
+                <span aria-hidden="true" className="text-amber-400">⚠</span>
+              )}
+              <span aria-hidden="true">$</span>
+              {budgetCap.toFixed(2)}
+            </button>
+            {budgetPanelOpen && meta && (
+              <BudgetSettingsPanel
+                workflowId={meta.id}
+                onClose={() => setBudgetPanelOpen(false)}
+                anchorRef={budgetBtnRef}
+              />
+            )}
+          </div>
           <span className="h-4 w-px bg-neutral-700 mx-1" aria-hidden="true" />
           <button
             type="button"
-            onClick={runWorkflow}
-            disabled={isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0}
+            onClick={handleRun}
+            disabled={isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0 || hasNoProviders}
             title={
-              isRunning                          ? "Run is starting…"              :
-              debugSnapshot?.status === "running" ? "Run in progress"               :
-              !meta                              ? "No workflow loaded"             :
-              nodes.length === 0                 ? "Add nodes to the canvas first" :
+              isRunning                          ? "Run is starting…"                                                            :
+              debugSnapshot?.status === "running" ? "Run in progress"                                                            :
+              !meta                              ? "No workflow loaded"                                                           :
+              nodes.length === 0                 ? "Add nodes to the canvas first"                                               :
+              hasNoProviders                     ? "Add an API key in Settings → Providers to run workflows"                     :
               undefined
             }
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0
+              isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0 || hasNoProviders
                 ? "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
                 : "border-emerald-600 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20"
             }`}
@@ -1260,14 +1363,16 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           <button
             type="button"
             onClick={() => setAutoRunEnabled(!autoRunEnabled)}
-            disabled={!meta || nodes.length === 0}
+            disabled={!meta || nodes.length === 0 || hasNoProviders}
             title={
-              autoRunEnabled
-                ? "Auto-Run is ON — workflow reruns after parameter edits"
-                : "Enable Auto-Run — rerun after meaningful edits"
+              hasNoProviders
+                ? "Add an API key in Settings → Providers to enable Auto-Run"
+                : autoRunEnabled
+                  ? "Auto-Run is ON — workflow reruns after parameter edits"
+                  : "Enable Auto-Run — rerun after meaningful edits"
             }
             className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              !meta || nodes.length === 0
+              !meta || nodes.length === 0 || hasNoProviders
                 ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-600"
                 : autoRunEnabled
                   ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
@@ -1276,6 +1381,58 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           >
             Auto-Run
           </button>
+          {/* Schedule button */}
+          <div className="relative">
+            <button
+              ref={scheduleBtnRef}
+              type="button"
+              onClick={() => { setBudgetPanelOpen(false); setSchedulePanelOpen((v) => !v); }}
+              disabled={!meta}
+              title={
+                !meta
+                  ? "No workflow loaded"
+                  : scheduleActive
+                  ? "Schedule active — click to edit"
+                  : "Schedule recurring runs"
+              }
+              aria-haspopup="dialog"
+              aria-expanded={schedulePanelOpen}
+              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                schedulePanelOpen
+                  ? "border-violet-500 bg-violet-500/10 text-violet-400"
+                  : scheduleActive
+                  ? "border-violet-700 bg-violet-700/10 text-violet-400 hover:bg-violet-700/20"
+                  : !meta
+                  ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-600"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+              }`}
+            >
+              {scheduleActive && (
+                <span
+                  className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400"
+                  aria-label="Schedule active"
+                />
+              )}
+              Schedule
+            </button>
+            {schedulePanelOpen && meta && (
+              <SchedulePanel
+                workflowId={meta.id}
+                onClose={() => setSchedulePanelOpen(false)}
+                anchorRef={scheduleBtnRef}
+                onScheduleChange={setScheduleActive}
+              />
+            )}
+          </div>
+          {hasNoProviders && (
+            <Link
+              href="/settings/providers"
+              className="text-xs text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-300"
+              title="Open provider settings"
+            >
+              Add API key
+            </Link>
+          )}
           {runBadge && (
             <span
               className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${runBadge.colorClass}`}
@@ -1384,6 +1541,24 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
         onClose={() => setFragmentBrowserOpen(false)}
         onInsert={handleInsertFragmentGraph}
       />
+
+      {/* Budget warning dialog — shown when estimated run cost exceeds cap */}
+      {budgetWarning && (
+        <BudgetWarningModal
+          estimatedCost={budgetWarning.estimatedCost}
+          budgetCap={budgetCap}
+          onProceed={() => {
+            setBudgetWarning(null);
+            void runWorkflow({ budgetCap });
+          }}
+          onCancel={() => setBudgetWarning(null)}
+          onIncreaseBudget={(newCap) => {
+            setBudgetCap(newCap);
+            setBudgetWarning(null);
+            void runWorkflow({ budgetCap: newCap });
+          }}
+        />
+      )}
 
       {/* Confirm delete dialog — shown when deleting a node with connected edges */}
       <ConfirmDeleteDialog

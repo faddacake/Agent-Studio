@@ -117,7 +117,12 @@ function ProviderCard({
   const [apiKey, setApiKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Pre-save validation (tests the typed key before committing to DB)
+  const [preTesting, setPreTesting] = useState(false);
+  const [preTestResult, setPreTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const isConfigured = config !== null;
 
@@ -125,6 +130,7 @@ function ProviderCard({
     if (!apiKey.trim() || saving) return;
     setSaving(true);
     setError(null);
+    setPreTestResult(null);
     try {
       const res = await fetch(`/api/providers/${provider.id}`, {
         method: "POST",
@@ -143,6 +149,29 @@ function ProviderCard({
       setError("Connection error — please try again");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handlePreTest() {
+    if (!apiKey.trim() || preTesting) return;
+    setPreTesting(true);
+    setPreTestResult(null);
+    try {
+      const res = await fetch(`/api/providers/${provider.id}/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        setPreTestResult({ ok: true, message: "Key accepted — click Save to store it" });
+      } else {
+        setPreTestResult({ ok: false, message: data.message || "Validation failed" });
+      }
+    } catch {
+      setPreTestResult({ ok: false, message: "Network error — please try again" });
+    } finally {
+      setPreTesting(false);
     }
   }
 
@@ -170,6 +199,27 @@ function ProviderCard({
     setEditing(false);
     setApiKey("");
     setError(null);
+    setPreTestResult(null);
+  }
+
+  async function handleTest() {
+    if (testing) return;
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const res = await fetch(`/api/providers/${provider.id}/validate`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        setTestResult({ ok: true, message: "Connection successful" });
+        onSaved(); // refresh validatedAt badge
+      } else {
+        setTestResult({ ok: false, message: data.message || "Validation failed" });
+      }
+    } catch {
+      setTestResult({ ok: false, message: "Network error — please try again" });
+    } finally {
+      setTesting(false);
+    }
   }
 
   return (
@@ -231,98 +281,159 @@ function ProviderCard({
 
       {/* Key input (shown when adding or editing) */}
       {(!isConfigured || editing) && (
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}>
-          <input
-            type="password"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={provider.keyPlaceholder}
-            onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
-            style={{
-              flex: 1,
-              padding: "9px 12px",
-              backgroundColor: "var(--color-bg-primary)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 8,
-              color: "var(--color-text-primary)",
-              fontSize: 14,
-              outline: "none",
-              boxSizing: "border-box",
-            }}
-          />
-          <button
-            onClick={handleSave}
-            disabled={!apiKey.trim() || saving}
-            style={{
-              padding: "9px 16px",
-              borderRadius: 8,
-              fontSize: 13,
-              fontWeight: 600,
-              border: "none",
-              backgroundColor: apiKey.trim() ? "var(--color-accent)" : "var(--color-surface-hover)",
-              color: apiKey.trim() ? "#fff" : "var(--color-text-muted)",
-              cursor: apiKey.trim() ? "pointer" : "default",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {saving ? "Saving..." : "Save"}
-          </button>
-          {editing && (
+        <div style={{ marginBottom: 10 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => { setApiKey(e.target.value); setPreTestResult(null); }}
+              placeholder={provider.keyPlaceholder}
+              onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+              style={{
+                flex: 1,
+                padding: "9px 12px",
+                backgroundColor: "var(--color-bg-primary)",
+                border: "1px solid var(--color-border)",
+                borderRadius: 8,
+                color: "var(--color-text-primary)",
+                fontSize: 14,
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
             <button
-              onClick={handleCancel}
+              onClick={handlePreTest}
+              disabled={!apiKey.trim() || preTesting}
+              title="Test this key against the provider before saving"
               style={{
                 padding: "9px 12px",
                 borderRadius: 8,
                 fontSize: 13,
-                border: "1px solid var(--color-border)",
+                border: "1px solid var(--color-accent)",
                 backgroundColor: "transparent",
-                color: "var(--color-text-secondary)",
-                cursor: "pointer",
+                color: !apiKey.trim() || preTesting ? "var(--color-text-muted)" : "var(--color-accent)",
+                cursor: apiKey.trim() && !preTesting ? "pointer" : "default",
                 whiteSpace: "nowrap",
               }}
             >
-              Cancel
+              {preTesting ? "Testing…" : "Test"}
             </button>
+            <button
+              onClick={handleSave}
+              disabled={!apiKey.trim() || saving}
+              style={{
+                padding: "9px 16px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                border: "none",
+                backgroundColor: apiKey.trim() ? "var(--color-accent)" : "var(--color-surface-hover)",
+                color: apiKey.trim() ? "#fff" : "var(--color-text-muted)",
+                cursor: apiKey.trim() ? "pointer" : "default",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {saving ? "Saving..." : "Save"}
+            </button>
+            {editing && (
+              <button
+                onClick={handleCancel}
+                style={{
+                  padding: "9px 12px",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  border: "1px solid var(--color-border)",
+                  backgroundColor: "transparent",
+                  color: "var(--color-text-secondary)",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+          {preTestResult && (
+            <div style={{
+              marginTop: 8,
+              padding: "7px 12px",
+              borderRadius: 6,
+              fontSize: 13,
+              border: `1px solid ${preTestResult.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+              backgroundColor: preTestResult.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+              color: preTestResult.ok ? "var(--color-success)" : "var(--color-error)",
+            }}>
+              {preTestResult.ok ? "✓ " : "✗ "}{preTestResult.message}
+            </div>
           )}
         </div>
       )}
 
       {/* Actions for configured providers */}
       {isConfigured && !editing && (
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
-            onClick={() => { setEditing(true); setError(null); }}
-            style={{
-              padding: "7px 14px",
-              borderRadius: 7,
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              onClick={handleTest}
+              disabled={testing}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 7,
+                fontSize: 13,
+                border: "1px solid var(--color-accent)",
+                backgroundColor: "transparent",
+                color: testing ? "var(--color-text-muted)" : "var(--color-accent)",
+                cursor: testing ? "default" : "pointer",
+              }}
+            >
+              {testing ? "Testing…" : "Test Connection"}
+            </button>
+            <button
+              onClick={() => { setEditing(true); setError(null); setTestResult(null); }}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 7,
+                fontSize: 13,
+                border: "1px solid var(--color-border)",
+                backgroundColor: "transparent",
+                color: "var(--color-text-secondary)",
+                cursor: "pointer",
+              }}
+            >
+              Update Key
+            </button>
+            <button
+              onClick={handleRemove}
+              disabled={removing}
+              style={{
+                padding: "7px 14px",
+                borderRadius: 7,
+                fontSize: 13,
+                border: "1px solid rgba(239,68,68,0.3)",
+                backgroundColor: "transparent",
+                color: removing ? "var(--color-text-muted)" : "var(--color-error)",
+                cursor: removing ? "default" : "pointer",
+              }}
+            >
+              {removing ? "Removing..." : "Remove"}
+            </button>
+            {config?.validatedAt && !testResult && (
+              <span style={{ fontSize: 12, color: "var(--color-text-muted)", alignSelf: "center" }}>
+                Validated {new Date(config.validatedAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+          {testResult && (
+            <div style={{
+              padding: "7px 12px",
+              borderRadius: 6,
               fontSize: 13,
-              border: "1px solid var(--color-border)",
-              backgroundColor: "transparent",
-              color: "var(--color-text-secondary)",
-              cursor: "pointer",
-            }}
-          >
-            Update Key
-          </button>
-          <button
-            onClick={handleRemove}
-            disabled={removing}
-            style={{
-              padding: "7px 14px",
-              borderRadius: 7,
-              fontSize: 13,
-              border: "1px solid rgba(239,68,68,0.3)",
-              backgroundColor: "transparent",
-              color: removing ? "var(--color-text-muted)" : "var(--color-error)",
-              cursor: removing ? "default" : "pointer",
-            }}
-          >
-            {removing ? "Removing..." : "Remove"}
-          </button>
-          {config?.validatedAt && (
-            <span style={{ fontSize: 12, color: "var(--color-text-muted)", alignSelf: "center", marginLeft: 4 }}>
-              Validated {new Date(config.validatedAt).toLocaleDateString()}
-            </span>
+              border: `1px solid ${testResult.ok ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+              backgroundColor: testResult.ok ? "rgba(34,197,94,0.08)" : "rgba(239,68,68,0.08)",
+              color: testResult.ok ? "var(--color-success)" : "var(--color-error)",
+            }}>
+              {testResult.ok ? "✓ " : "✗ "}{testResult.message}
+            </div>
           )}
         </div>
       )}

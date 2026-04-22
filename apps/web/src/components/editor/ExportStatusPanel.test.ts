@@ -2,11 +2,11 @@
  * Tests for ExportStatusPanel render output.
  *
  * Covers:
- *   - idle             → renders "Export" button
- *   - triggering       → renders static "Exporting…" text, no pulsing dot
- *   - fetching (null status)   → pulsing dot + "Exporting…" fallback label
- *   - fetching (pending)       → pulsing dot + "Queued" label
- *   - fetching (running)       → pulsing dot + "Rendering…" label
+ *   - idle             → renders "Preview" + "Export" buttons
+ *   - triggering       → renders static "Export starting…" text, no pulsing dot
+ *   - fetching (null status)   → pulsing dot + "Queued" stage badge + "Export" label
+ *   - fetching (pending)       → pulsing dot + "Queued" stage badge
+ *   - fetching (running)       → pulsing dot + "Rendering" stage badge
  *   - done (no renderResult)   → "Export queued", no dot, dismiss button
  *   - done (with renderResult) → "Export done", scene metadata, dismiss button
  *   - error                    → "Export failed", Retry button with error title
@@ -15,8 +15,8 @@
  * Accessibility contract (live region):
  *   - role="status" aria-live="polite" region is present in every state
  *   - idle → empty announcement (no noise on reset)
- *   - triggering → "Exporting"
- *   - fetching/null → "Exporting"
+ *   - triggering → "Export starting"
+ *   - fetching/null → "Export exporting"
  *   - fetching/pending → "Export queued"
  *   - fetching/running → "Export rendering"
  *   - done (no result) → "Export queued successfully"
@@ -40,21 +40,25 @@ const { ExportStatusPanel } = await import("./ExportStatusPanel.js");
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 import type { ExportJobStatusResponse } from "@/lib/exportJobStatus";
-import type { ExportJobHookState } from "@/hooks/useExportJob";
+import type { ExportJobHookState, ExportMode } from "@/hooks/useExportJob";
 
 type Props = {
   state: ExportJobHookState;
   jobStatus?: ExportJobStatusResponse | null;
   error?: string | null;
+  exportMode?: ExportMode | null;
 };
 
-function render({ state, jobStatus = null, error = null }: Props): string {
+function render({ state, jobStatus = null, error = null, exportMode = null }: Props): string {
   return renderToStaticMarkup(
     createElement(ExportStatusPanel, {
       state,
       jobStatus,
       error,
+      exportMode,
+      startedAt: null,
       onExport: () => {},
+      onPreview: () => {},
       onReset: () => {},
     }),
   );
@@ -102,6 +106,11 @@ describe("ExportStatusPanel — idle", () => {
     assert.ok(html.includes("<button"), "should be a button element");
   });
 
+  it("renders a Preview button alongside Export", () => {
+    const html = render({ state: "idle" });
+    assert.ok(html.includes("Preview"), "should contain 'Preview' button");
+  });
+
   it("does not show a pulsing dot", () => {
     const html = render({ state: "idle" });
     assert.ok(!html.includes("esp-pulse"), "should not contain polling animation");
@@ -111,14 +120,14 @@ describe("ExportStatusPanel — idle", () => {
 // ── triggering ────────────────────────────────────────────────────────────────
 
 describe("ExportStatusPanel — triggering", () => {
-  it("renders static 'Exporting…' text", () => {
+  it("renders static 'starting…' text", () => {
     const html = render({ state: "triggering" });
-    assert.ok(html.includes("Exporting"), "should contain 'Exporting'");
+    assert.ok(html.includes("starting"), "should contain 'starting'");
   });
 
-  it("does not show a pulsing dot (POST still in flight, not yet polling)", () => {
+  it("shows a pulsing dot while the POST is in flight", () => {
     const html = render({ state: "triggering" });
-    assert.ok(!html.includes("esp-pulse"), "no animation during triggering");
+    assert.ok(html.includes("esp-pulse"), "pulsing dot should appear during triggering state");
   });
 
   it("does not show a Retry or dismiss button", () => {
@@ -136,9 +145,9 @@ describe("ExportStatusPanel — fetching (polling indicator)", () => {
     assert.ok(html.includes("esp-pulse"), "pulsing dot animation must be present");
   });
 
-  it("renders 'Exporting…' fallback when jobStatus is null", () => {
+  it("renders 'Queued' stage badge when jobStatus is null", () => {
     const html = render({ state: "fetching", jobStatus: null });
-    assert.ok(html.includes("Exporting"), "fallback label should be 'Exporting…'");
+    assert.ok(html.includes("Queued"), "fallback stage badge should be 'Queued'");
   });
 
   it("renders pulsing dot when job is pending", () => {
@@ -156,9 +165,9 @@ describe("ExportStatusPanel — fetching (polling indicator)", () => {
     assert.ok(html.includes("esp-pulse"), "pulsing dot must appear for running job");
   });
 
-  it("renders 'Rendering…' label when job is running", () => {
+  it("renders 'Rendering' stage badge when job is running", () => {
     const html = render({ state: "fetching", jobStatus: makeJobStatus("running") });
-    assert.ok(html.includes("Rendering"), "label should be 'Rendering…' for running job");
+    assert.ok(html.includes("Rendering"), "stage badge should be 'Rendering' for running job");
   });
 
   it("does not show dismiss or Retry buttons while fetching", () => {
@@ -231,9 +240,11 @@ describe("ExportStatusPanel — error", () => {
     assert.ok(html.includes("Retry"), "Retry button must appear");
   });
 
-  it("forwards error message in the button title", () => {
+  it("renders the humanized error message inline (not raw string in button title)", () => {
+    // humanizeExportError("network timeout") → "Render timed out"
+    // The humanized message appears inline; the button title carries the shortcut hint.
     const html = render({ state: "error", error: "network timeout" });
-    assert.ok(html.includes("network timeout"), "error text should appear in button title");
+    assert.ok(html.includes("timed out"), "humanized error text must appear in rendered output");
   });
 
   it("Retry button title includes the shortcut hint", () => {
@@ -279,14 +290,14 @@ describe("ExportStatusPanel — live region announcement text", () => {
     assert.equal(text, "", "idle must emit empty announcement");
   });
 
-  it("triggering → 'Exporting'", () => {
+  it("triggering → 'Export starting'", () => {
     const text = liveRegionText(render({ state: "triggering" }));
-    assert.equal(text, "Exporting");
+    assert.equal(text, "Export starting");
   });
 
-  it("fetching with null jobStatus → 'Exporting'", () => {
+  it("fetching with null jobStatus → 'Export exporting'", () => {
     const text = liveRegionText(render({ state: "fetching", jobStatus: null }));
-    assert.equal(text, "Exporting");
+    assert.equal(text, "Export exporting");
   });
 
   it("fetching with pending job → 'Export queued'", () => {
@@ -325,6 +336,11 @@ describe("ExportStatusPanel — live region announcement text", () => {
   it("error → 'Export failed'", () => {
     const text = liveRegionText(render({ state: "error", error: "timeout" }));
     assert.equal(text, "Export failed");
+  });
+
+  it("triggering with preview mode → 'Preview starting'", () => {
+    const text = liveRegionText(render({ state: "triggering", exportMode: "preview" }));
+    assert.equal(text, "Preview starting");
   });
 });
 

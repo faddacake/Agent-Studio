@@ -41,6 +41,11 @@ body {
   50%       { opacity: 0.4; transform: scale(1.35); }
 }
 
+/* Spinner for in-progress actions (e.g. voiceover generation button) */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   * {

@@ -23,7 +23,7 @@ import path from "node:path";
 import fs from "node:fs";
 
 import { renderExportJob, getExportJobRenderer } from "./editorExportJobRenderer";
-import { realExportJobRenderer, buildRealRendererResult, normalizeRealRendererInput, buildRealRenderPlan, buildRealRenderArtifactDescriptor, buildRealRenderArtifactPath, buildRealRenderArtifactIdentity, assembleRealRendererResult, writeRealRenderArtifactFile, REAL_RENDER_ARTIFACT_FILENAME } from "./editorExportJobRealRenderer";
+import { realExportJobRenderer, buildRealRendererResult, normalizeRealRendererInput, buildRealRenderPlan, buildRealRenderArtifactDescriptor, buildRealRenderArtifactPath, buildRealRenderArtifactIdentity, assembleRealRendererResult, writeRealRenderArtifactFile, buildFfmpegArgs, REAL_RENDER_ARTIFACT_FILENAME, REAL_PREVIEW_ARTIFACT_FILENAME, PREVIEW_MAX_DURATION_MS, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET, clampScenesToDuration } from "./editorExportJobRealRenderer";
 import { ARTIFACTS_DIR } from "../../lib/artifactStorage";
 import type { ExportJobPayload } from "@aistudio/shared";
 
@@ -361,9 +361,9 @@ describe("normalizeRealRendererInput — derived values", () => {
     assert.deepEqual(normalizeRealRendererInput(payload), normalizeRealRendererInput(payload));
   });
 
-  it("result has exactly three fields: projectId, sceneCount, totalDurationMs", () => {
+  it("result has exactly six fields including audioTrack", () => {
     const result = normalizeRealRendererInput(singleScenePayload());
-    assert.deepEqual(Object.keys(result).sort(), ["projectId", "sceneCount", "totalDurationMs"]);
+    assert.deepEqual(Object.keys(result).sort(), ["audioTrack", "isPreview", "projectId", "sceneCount", "scenes", "totalDurationMs"]);
   });
 });
 
@@ -400,12 +400,18 @@ describe("buildRealRenderPlan — derived values", () => {
     assert.equal(buildRealRenderPlan(input).artifactCount, 1);
   });
 
-  it("result has exactly four fields: artifactCount, projectId, sceneCount, totalDurationMs", () => {
+  it("result has exactly ten fields including encoding params, scenes, and audioTrack", () => {
     const input = normalizeRealRendererInput(singleScenePayload());
     assert.deepEqual(Object.keys(buildRealRenderPlan(input)).sort(), [
       "artifactCount",
+      "audioTrack",
+      "crf",
+      "heightPx",
+      "isPreview",
+      "preset",
       "projectId",
       "sceneCount",
+      "scenes",
       "totalDurationMs",
     ]);
   });
@@ -578,22 +584,28 @@ describe("assembleRealRendererResult — stable result assembly", () => {
 // ── writeRealRenderArtifactFile ───────────────────────────────────────────────
 
 describe("writeRealRenderArtifactFile — storage I/O seam", () => {
+  // Derive a real plan from a fixture so the second argument is fully typed.
+  function stubPlan() {
+    return buildRealRenderPlan(normalizeRealRendererInput(singleScenePayload()));
+  }
+
   it("creates the file at the given path", () => {
     const artifactPath = buildRealRenderArtifactPath("proj-write-test");
-    writeRealRenderArtifactFile(artifactPath);
+    writeRealRenderArtifactFile(artifactPath, stubPlan());
     assert.ok(fs.existsSync(artifactPath), "file exists after write");
   });
 
   it("creates parent directories as needed", () => {
     const artifactPath = buildRealRenderArtifactPath("proj-mkdir-test");
-    writeRealRenderArtifactFile(artifactPath);
+    writeRealRenderArtifactFile(artifactPath, stubPlan());
     assert.ok(fs.existsSync(path.dirname(artifactPath)), "parent directory exists");
   });
 
   it("is idempotent — calling twice does not throw", () => {
     const artifactPath = buildRealRenderArtifactPath("proj-idempotent-test");
-    writeRealRenderArtifactFile(artifactPath);
-    assert.doesNotThrow(() => writeRealRenderArtifactFile(artifactPath));
+    const plan = stubPlan();
+    writeRealRenderArtifactFile(artifactPath, plan);
+    assert.doesNotThrow(() => writeRealRenderArtifactFile(artifactPath, plan));
   });
 });
 
@@ -687,5 +699,454 @@ describe("renderExportJob — routes through real renderer path", () => {
   it("output equals getExportJobRenderer() output for the same payload", () => {
     const payload = twoScenePayload();
     assert.deepEqual(renderExportJob(payload), getExportJobRenderer()(payload));
+  });
+});
+
+// ── Preview render — fixtures & constants ─────────────────────────────────────
+
+/** A two-scene payload that spans 60 s, well beyond the 30 s preview cap. */
+function longPayload(): ExportJobPayload {
+  return {
+    projectId: "proj-long",
+    aspectRatio: "16:9",
+    totalDurationMs: 60_000,
+    isPreview: false, // default — individual tests set isPreview: true
+    scenes: [
+      {
+        id: "s1",
+        index: 0,
+        type: "image",
+        src: "a.jpg",
+        durationMs: 40_000,
+        startMs: 0,
+        endMs: 40_000,
+        transition: "cut",
+        fadeDurationMs: 0,
+        fadeStartMs: 40_000,
+        textOverlay: null,
+      },
+      {
+        id: "s2",
+        index: 1,
+        type: "video",
+        src: "b.mp4",
+        durationMs: 20_000,
+        startMs: 40_000,
+        endMs: 60_000,
+        transition: "cut",
+        fadeDurationMs: 0,
+        fadeStartMs: 60_000,
+        textOverlay: null,
+      },
+    ],
+  };
+}
+
+// ── clampScenesToDuration ─────────────────────────────────────────────────────
+
+describe("clampScenesToDuration — scene list trimming", () => {
+  it("returns all scenes when all start before maxMs", () => {
+    const scenes = twoScenePayload().scenes;
+    const clamped = clampScenesToDuration(scenes, 60_000);
+    assert.equal(clamped.length, 2);
+  });
+
+  it("excludes scenes that start at or after maxMs", () => {
+    // s2 starts at 40_000 which is >= 30_000
+    const scenes = longPayload().scenes;
+    const clamped = clampScenesToDuration(scenes, PREVIEW_MAX_DURATION_MS);
+    assert.equal(clamped.length, 1, "only scene starting before 30 s is included");
+    assert.equal(clamped[0].id, "s1");
+  });
+
+  it("returns all scenes when maxMs exceeds total duration", () => {
+    const scenes = singleScenePayload().scenes;
+    const clamped = clampScenesToDuration(scenes, 999_999);
+    assert.equal(clamped.length, 1);
+  });
+
+  it("returns empty array when maxMs is 0", () => {
+    const clamped = clampScenesToDuration(singleScenePayload().scenes, 0);
+    assert.equal(clamped.length, 0);
+  });
+
+  it("is a pure function — does not mutate the input array", () => {
+    const scenes = twoScenePayload().scenes;
+    const original = scenes.slice();
+    clampScenesToDuration(scenes, PREVIEW_MAX_DURATION_MS);
+    assert.deepEqual(scenes, original);
+  });
+});
+
+// ── normalizeRealRendererInput — preview mode ─────────────────────────────────
+
+describe("normalizeRealRendererInput — preview mode", () => {
+  it("isPreview is false when payload.isPreview is absent", () => {
+    assert.equal(normalizeRealRendererInput(singleScenePayload()).isPreview, false);
+  });
+
+  it("isPreview is false when payload.isPreview is false", () => {
+    const payload = { ...singleScenePayload(), isPreview: false };
+    assert.equal(normalizeRealRendererInput(payload).isPreview, false);
+  });
+
+  it("isPreview is true when payload.isPreview is true", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    assert.equal(normalizeRealRendererInput(payload).isPreview, true);
+  });
+
+  it("clamps totalDurationMs to PREVIEW_MAX_DURATION_MS for long preview payloads", () => {
+    const payload = { ...longPayload(), isPreview: true };
+    const input = normalizeRealRendererInput(payload);
+    assert.equal(input.totalDurationMs, PREVIEW_MAX_DURATION_MS);
+  });
+
+  it("does not clamp totalDurationMs for long full-export payloads", () => {
+    const payload = { ...longPayload(), isPreview: false };
+    const input = normalizeRealRendererInput(payload);
+    assert.equal(input.totalDurationMs, 60_000);
+  });
+
+  it("excludes scenes starting at or after PREVIEW_MAX_DURATION_MS in preview mode", () => {
+    const payload = { ...longPayload(), isPreview: true };
+    const input = normalizeRealRendererInput(payload);
+    assert.equal(input.sceneCount, 1, "scene starting at 40 s is excluded");
+    assert.equal(input.scenes[0].id, "s1");
+  });
+
+  it("keeps all scenes in full export mode regardless of duration", () => {
+    const payload = { ...longPayload(), isPreview: false };
+    const input = normalizeRealRendererInput(payload);
+    assert.equal(input.sceneCount, 2);
+  });
+});
+
+// ── buildRealRenderPlan — encoding constants ──────────────────────────────────
+
+describe("buildRealRenderPlan — encoding settings", () => {
+  it("full export uses FULL_HEIGHT_PX", () => {
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(singleScenePayload()));
+    assert.equal(plan.heightPx, FULL_HEIGHT_PX);
+  });
+
+  it("full export uses FULL_CRF", () => {
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(singleScenePayload()));
+    assert.equal(plan.crf, FULL_CRF);
+  });
+
+  it("full export uses FULL_PRESET", () => {
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(singleScenePayload()));
+    assert.equal(plan.preset, FULL_PRESET);
+  });
+
+  it("preview uses PREVIEW_HEIGHT_PX (lower resolution)", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(payload));
+    assert.equal(plan.heightPx, PREVIEW_HEIGHT_PX);
+    assert.ok(PREVIEW_HEIGHT_PX < FULL_HEIGHT_PX, "preview height must be lower than full");
+  });
+
+  it("preview uses PREVIEW_CRF (faster encode, higher value)", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(payload));
+    assert.equal(plan.crf, PREVIEW_CRF);
+    assert.ok(PREVIEW_CRF > FULL_CRF, "preview CRF must be higher than full (faster, lower quality)");
+  });
+
+  it("preview uses PREVIEW_PRESET (ultrafast)", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(payload));
+    assert.equal(plan.preset, PREVIEW_PRESET);
+    assert.equal(PREVIEW_PRESET, "ultrafast");
+  });
+
+  it("isPreview is false in plan for full export", () => {
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(singleScenePayload()));
+    assert.equal(plan.isPreview, false);
+  });
+
+  it("isPreview is true in plan for preview job", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    const plan = buildRealRenderPlan(normalizeRealRendererInput(payload));
+    assert.equal(plan.isPreview, true);
+  });
+});
+
+// ── Artifact naming — preview vs full ────────────────────────────────────────
+
+describe("buildRealRenderArtifactPath — preview vs full filename", () => {
+  it("full export uses REAL_RENDER_ARTIFACT_FILENAME (export.mp4)", () => {
+    const p = buildRealRenderArtifactPath("proj-x", false);
+    assert.ok(p.endsWith(REAL_RENDER_ARTIFACT_FILENAME), `expected ${REAL_RENDER_ARTIFACT_FILENAME}`);
+  });
+
+  it("preview uses REAL_PREVIEW_ARTIFACT_FILENAME (preview.mp4)", () => {
+    const p = buildRealRenderArtifactPath("proj-x", true);
+    assert.ok(p.endsWith(REAL_PREVIEW_ARTIFACT_FILENAME), `expected ${REAL_PREVIEW_ARTIFACT_FILENAME}`);
+  });
+
+  it("preview and full paths are different for the same projectId", () => {
+    const full    = buildRealRenderArtifactPath("proj-x", false);
+    const preview = buildRealRenderArtifactPath("proj-x", true);
+    assert.notEqual(full, preview, "preview.mp4 and export.mp4 must differ");
+  });
+});
+
+describe("buildRealRenderArtifactIdentity — labels", () => {
+  it("full export label is 'Exported Video'", () => {
+    assert.equal(buildRealRenderArtifactIdentity(false).label, "Exported Video");
+  });
+
+  it("preview label contains 'Preview'", () => {
+    assert.ok(
+      buildRealRenderArtifactIdentity(true).label.includes("Preview"),
+      "preview label must mention Preview",
+    );
+  });
+
+  it("preview label contains '480p'", () => {
+    assert.ok(
+      buildRealRenderArtifactIdentity(true).label.includes("480p"),
+      "preview label must include resolution hint",
+    );
+  });
+
+  it("both use mimeType video/mp4", () => {
+    assert.equal(buildRealRenderArtifactIdentity(false).mimeType, "video/mp4");
+    assert.equal(buildRealRenderArtifactIdentity(true).mimeType, "video/mp4");
+  });
+});
+
+// ── buildRealRendererResult — preview end-to-end ─────────────────────────────
+
+describe("buildRealRendererResult — preview job", () => {
+  it("artifact filename is preview.mp4 when isPreview is true", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    const { artifacts } = buildRealRendererResult(payload);
+    assert.ok(
+      artifacts[0].path.endsWith(REAL_PREVIEW_ARTIFACT_FILENAME),
+      "preview artifact must use preview.mp4 filename",
+    );
+  });
+
+  it("artifact label mentions Preview for preview job", () => {
+    const payload = { ...singleScenePayload(), isPreview: true };
+    const { artifacts } = buildRealRendererResult(payload);
+    assert.ok(artifacts[0].label?.includes("Preview"), "label must mention Preview");
+  });
+
+  it("artifact filename is export.mp4 for full export", () => {
+    const payload = { ...singleScenePayload(), isPreview: false };
+    const { artifacts } = buildRealRendererResult(payload);
+    assert.ok(
+      artifacts[0].path.endsWith(REAL_RENDER_ARTIFACT_FILENAME),
+      "full export artifact must use export.mp4 filename",
+    );
+  });
+
+  it("preview of long video clamps sceneCount to included scenes", () => {
+    const payload = { ...longPayload(), isPreview: true };
+    const result = buildRealRendererResult(payload);
+    assert.equal(result.sceneCount, 1, "only scenes starting before 30 s are counted");
+  });
+
+  it("preview of long video clamps totalDurationMs to PREVIEW_MAX_DURATION_MS", () => {
+    const payload = { ...longPayload(), isPreview: true };
+    const result = buildRealRendererResult(payload);
+    assert.equal(result.totalDurationMs, PREVIEW_MAX_DURATION_MS);
+  });
+
+  it("full export of long video keeps full sceneCount and duration", () => {
+    const payload = { ...longPayload(), isPreview: false };
+    const result = buildRealRendererResult(payload);
+    assert.equal(result.sceneCount, 2);
+    assert.equal(result.totalDurationMs, 60_000);
+  });
+
+  it("preview placeholder file is written to disk at preview.mp4 path", () => {
+    const payload = { ...singleScenePayload(), projectId: "proj-preview-write", isPreview: true };
+    const { artifacts } = buildRealRendererResult(payload);
+    assert.ok(fs.existsSync(artifacts[0].path), "preview placeholder file must exist on disk");
+  });
+});
+
+// ── buildFfmpegArgs — pure function, no ffmpeg required ───────────────────────
+
+describe("buildFfmpegArgs — single image scene", () => {
+  const scene = singleScenePayload().scenes[0]; // image, 5 s
+  const out = "/tmp/test-out.mp4";
+
+  it("throws for empty scene list", () => {
+    assert.throws(
+      () => buildFfmpegArgs([], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET),
+      /empty/i,
+    );
+  });
+
+  it("starts with -y (overwrite flag)", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    assert.equal(args[0], "-y");
+  });
+
+  it("adds -loop 1 -framerate 25 before -i for image scenes", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    const loopIdx = args.indexOf("-loop");
+    assert.ok(loopIdx !== -1, "-loop must be present for image scene");
+    assert.equal(args[loopIdx + 1], "1");
+    const frIdx = args.indexOf("-framerate");
+    assert.ok(frIdx !== -1, "-framerate must be present for image scene");
+    assert.equal(args[frIdx + 1], "25");
+  });
+
+  it("passes -i with the scene src", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    const iIdx = args.indexOf("-i");
+    assert.ok(iIdx !== -1, "-i must be present");
+    assert.equal(args[iIdx + 1], scene.src);
+  });
+
+  it("uses -t to set output duration (single-scene path)", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    const tIdx = args.indexOf("-t");
+    assert.ok(tIdx !== -1, "-t must be present in single-scene path");
+    assert.ok(parseFloat(args[tIdx + 1]) > 0, "-t value must be positive");
+  });
+
+  it("passes -vf with scale using the given heightPx", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    const vfIdx = args.indexOf("-vf");
+    assert.ok(vfIdx !== -1, "-vf must be present");
+    assert.ok(args[vfIdx + 1].includes(String(PREVIEW_HEIGHT_PX)), "vf must reference heightPx");
+  });
+
+  it("passes -crf with the given value", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    const crfIdx = args.indexOf("-crf");
+    assert.ok(crfIdx !== -1, "-crf must be present");
+    assert.equal(args[crfIdx + 1], String(PREVIEW_CRF));
+  });
+
+  it("passes -preset with the given preset string", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    const presetIdx = args.indexOf("-preset");
+    assert.ok(presetIdx !== -1, "-preset must be present");
+    assert.equal(args[presetIdx + 1], PREVIEW_PRESET);
+  });
+
+  it("passes -an (no audio)", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    assert.ok(args.includes("-an"), "-an must be present");
+  });
+
+  it("last arg is the output path", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    assert.equal(args[args.length - 1], out);
+  });
+
+  it("does not include -filter_complex in single-scene path", () => {
+    const args = buildFfmpegArgs([scene], out, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET);
+    assert.ok(!args.includes("-filter_complex"), "single-scene path must not use filter_complex");
+  });
+});
+
+describe("buildFfmpegArgs — single video scene", () => {
+  const scene = twoScenePayload().scenes[1]; // video scene (s2)
+  const out = "/tmp/test-video-out.mp4";
+
+  it("does not add -loop 1 for video scene", () => {
+    const args = buildFfmpegArgs([scene], out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    assert.ok(!args.includes("-loop"), "-loop must not appear for video scene");
+  });
+
+  it("passes -i with the video src", () => {
+    const args = buildFfmpegArgs([scene], out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const iIdx = args.indexOf("-i");
+    assert.ok(iIdx !== -1);
+    assert.equal(args[iIdx + 1], scene.src);
+  });
+
+  it("uses FULL_HEIGHT_PX in -vf filter", () => {
+    const args = buildFfmpegArgs([scene], out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const vfIdx = args.indexOf("-vf");
+    assert.ok(args[vfIdx + 1].includes(String(FULL_HEIGHT_PX)));
+  });
+});
+
+describe("buildFfmpegArgs — multi-scene cut transitions", () => {
+  // Build an explicit two-scene list where both transitions are hard cuts.
+  const scenes = (() => {
+    const base = twoScenePayload().scenes;
+    return [
+      { ...base[0], transition: "cut" as const, fadeDurationMs: 0 },
+      { ...base[1], transition: "cut" as const, fadeDurationMs: 0 },
+    ];
+  })();
+  const out = "/tmp/test-multi-out.mp4";
+
+  it("uses -filter_complex for multi-scene", () => {
+    const args = buildFfmpegArgs(scenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    assert.ok(args.includes("-filter_complex"), "multi-scene must use filter_complex");
+  });
+
+  it("includes concat filter for cut transitions", () => {
+    const args = buildFfmpegArgs(scenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fcIdx = args.indexOf("-filter_complex");
+    assert.ok(args[fcIdx + 1].includes("concat"), "concat must appear in filter_complex");
+  });
+
+  it("does not include xfade for all-cut sequences", () => {
+    const args = buildFfmpegArgs(scenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    assert.ok(!fc.includes("xfade"), "xfade must not appear for all-cut sequences");
+  });
+
+  it("includes -map argument pointing to vout", () => {
+    const args = buildFfmpegArgs(scenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const mapIdx = args.indexOf("-map");
+    assert.ok(mapIdx !== -1, "-map must be present in multi-scene path");
+    assert.ok(args[mapIdx + 1].includes("vout"), "-map must reference [vout]");
+  });
+
+  it("includes trim for each scene in filter_complex", () => {
+    const args = buildFfmpegArgs(scenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    assert.ok(fc.includes("[0:v]trim="), "scene 0 trim must appear");
+    assert.ok(fc.includes("[1:v]trim="), "scene 1 trim must appear");
+  });
+});
+
+describe("buildFfmpegArgs — multi-scene fade transition", () => {
+  // Construct two scenes where scene 0 has a fade transition out (500 ms fade)
+  const fadeScenes = (() => {
+    const base = twoScenePayload().scenes;
+    const s0 = { ...base[0], transition: "fade" as const, fadeDurationMs: 500, fadeStartMs: 3500 };
+    return [s0, base[1]];
+  })();
+  const out = "/tmp/test-fade-out.mp4";
+
+  it("uses xfade when scene has fade transition", () => {
+    const args = buildFfmpegArgs(fadeScenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    assert.ok(fc.includes("xfade"), "xfade must appear for fade transition");
+  });
+
+  it("xfade references 'fade' transition type", () => {
+    const args = buildFfmpegArgs(fadeScenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    assert.ok(fc.includes("transition=fade"), "xfade transition type must be 'fade'");
+  });
+
+  it("xfade has a positive offset", () => {
+    const args = buildFfmpegArgs(fadeScenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    const m = fc.match(/offset=(\d+\.\d+)/);
+    assert.ok(m, "offset must appear in xfade");
+    assert.ok(parseFloat(m[1]) > 0, "offset must be positive");
+  });
+
+  it("does not use concat for a fade-only two-scene sequence", () => {
+    const args = buildFfmpegArgs(fadeScenes, out, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET);
+    const fc = args[args.indexOf("-filter_complex") + 1];
+    assert.ok(!fc.includes("concat"), "concat must not appear when xfade is used");
   });
 });

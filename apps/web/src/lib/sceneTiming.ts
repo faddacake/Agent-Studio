@@ -14,6 +14,14 @@ export const DEFAULT_FADE_MS = 800;
 export const MIN_SCENE_DURATION_S = 0.1;
 
 /**
+ * Default scene durations (seconds) used when inserting a new artifact as a scene.
+ * Video default is a round number that the auto-detection will immediately correct
+ * once the clip's metadata loads; image default is a comfortable display window.
+ */
+export const DEFAULT_VIDEO_DURATION_S = 10;
+export const DEFAULT_IMAGE_DURATION_S = 5;
+
+/**
  * Clamp and round a raw duration value to 0.1 s precision, enforcing
  * MIN_SCENE_DURATION_S as the lower bound.
  * Use this in every place that accepts user duration input.
@@ -38,17 +46,39 @@ export function sceneStartMs(scenes: Scene[], index: number): number {
 }
 
 /**
+ * Maximum fraction of a scene's duration that a crossfade may consume.
+ *
+ * At 0.8 a fade can start as early as 20 % into the scene, giving smooth
+ * dissolves on short clips while still preventing the scene from being
+ * invisible for its entire playback window.
+ */
+const FADE_CAP_FRACTION = 0.8;
+
+/**
  * Effective fade duration (ms) for a scene.
  *
  * Rules:
  * - Returns 0 when `transition !== "fade"` or the scene is the last one.
  * - Uses `scene.fadeDurationMs ?? DEFAULT_FADE_MS`.
- * - Capped at 50 % of the scene's own duration to prevent overlap artefacts.
+ * - Capped at FADE_CAP_FRACTION (80 %) of the scene's own duration so the
+ *   outgoing clip is visible for at least 20 % of its runtime before the
+ *   dissolve begins.
  */
 export function effectiveFadeDurationMs(scene: Scene, hasNextScene: boolean): number {
   if (scene.transition !== "fade" || !hasNextScene) return 0;
   const authored = scene.fadeDurationMs ?? DEFAULT_FADE_MS;
-  return Math.min(authored, scene.duration * 1000 * 0.5);
+  return Math.min(authored, scene.duration * 1000 * FADE_CAP_FRACTION);
+}
+
+/**
+ * Returns true when the authored fade duration is larger than the cap allows.
+ * Used by SceneInspector to show a "capped" hint so users understand why their
+ * authored value is not fully applied during playback and export.
+ */
+export function authoredFadeIsClipped(scene: Scene, hasNextScene: boolean): boolean {
+  if (scene.transition !== "fade" || !hasNextScene) return false;
+  const authored = scene.fadeDurationMs ?? DEFAULT_FADE_MS;
+  return authored > scene.duration * 1000 * FADE_CAP_FRACTION;
 }
 
 /**

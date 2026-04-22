@@ -2,6 +2,7 @@ import { Worker, Queue } from "bullmq";
 import { getDb, closeDb, checkpoint } from "@aistudio/db";
 import { processNodeJob, type NodeJobData, type NodeJobResult } from "./nodeJobProcessor.js";
 import { processExportJob, type ExportJobProcessorData } from "./exportJobProcessor.js";
+import { startScheduler } from "./scheduler.js";
 
 const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379";
 const redisConnection = { url: REDIS_URL };
@@ -114,7 +115,12 @@ function startWorkers() {
     console.error(`[worker] Export job ${job?.id} failed:`, err.message);
   });
 
-  console.log(`[worker] Workers started (predictions concurrency=${concurrency}, downloads concurrency=10)`);
+  console.log(`[worker] Workers started (predictions concurrency=${concurrency}, downloads concurrency=10, export concurrency=1)`);
+
+  // ── Workflow schedule runner ──────────────────────────────────────────────
+  // Reads workflow_schedule:* entries from the settings table every minute
+  // and POSTs to /api/workflows/:id/runs for each enabled, matching schedule.
+  startScheduler();
 
   // Graceful shutdown
   const shutdown = async () => {

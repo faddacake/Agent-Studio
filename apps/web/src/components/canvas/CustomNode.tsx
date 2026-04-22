@@ -4,6 +4,7 @@ import { memo, useEffect, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { Port } from "@aistudio/shared";
 import { useWorkflowStore } from "@/stores/workflowStore";
+import { useShallow } from "zustand/react/shallow";
 import { formatDuration, formatCost, formatElapsed } from "@/lib/formatExecution";
 import { NODE_STATE_DOT } from "@/lib/nodeRunState";
 import { canRetry } from "@/lib/retryRun";
@@ -54,8 +55,10 @@ function CustomNodeComponent({ id, data, selected }: NodeProps) {
     state.debugSnapshot ? null : (state.nodeRunStatesById[id] ?? null),
   );
 
-  // Per-node run status + error + blocked reason — re-renders only when these fields change
-  const { runStatus, runError, durationMs, cost, attempt, startedAt, isBlockedByUpstream, blockedByLabel } = useWorkflowStore((state) => {
+  // Per-node run status + error + blocked reason — re-renders only when these fields change.
+  // useShallow prevents "getSnapshot should be cached" warnings by doing shallow equality
+  // on the returned object instead of reference equality, avoiding infinite re-renders.
+  const { runStatus, runError, durationMs, cost, attempt, startedAt, isBlockedByUpstream, blockedByLabel } = useWorkflowStore(useShallow((state) => {
     if (!state.debugSnapshot) return { runStatus: null, runError: null, durationMs: null, cost: null, attempt: null, startedAt: null, isBlockedByUpstream: false, blockedByLabel: null };
     const nodes = state.debugSnapshot.nodes;
     const node = nodes.find((n) => n.nodeId === id);
@@ -76,7 +79,7 @@ function CustomNodeComponent({ id, data, selected }: NodeProps) {
       isBlockedByUpstream: reason !== null,
       blockedByLabel,
     };
-  });
+  }));
 
   // Retry eligibility — only when not already running and a workflow is loaded
   const canShowRetry = useWorkflowStore((s) => !s.isRunning && !!s.meta);

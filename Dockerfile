@@ -1,5 +1,6 @@
 # Stage 1: Dependencies
 FROM node:22-slim AS deps
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
@@ -10,6 +11,7 @@ RUN pnpm install --frozen-lockfile || pnpm install
 
 # Stage 2: Builder
 FROM node:22-slim AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -40,7 +42,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY .npmrc ./
 
 COPY packages/worker/package.json ./packages/worker/
-RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ ffmpeg && rm -rf /var/lib/apt/lists/*
 
 RUN corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --prod --frozen-lockfile || pnpm install --prod
 
@@ -54,12 +56,12 @@ COPY --from=builder --chown=aistudio:aistudio /app/apps/web/.next ./apps/web/.ne
 COPY --from=builder --chown=aistudio:aistudio /app/apps/web/public ./apps/web/public
 
 
-# Copy worker build
-# Copy db build (required by worker)
+# Copy worker build and all workspace package builds required at runtime
+COPY --from=builder --chown=aistudio:aistudio /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=aistudio:aistudio /app/packages/engine/dist ./packages/engine/dist
 COPY --from=builder --chown=aistudio:aistudio /app/packages/db/dist ./packages/db/dist
 COPY --from=builder --chown=aistudio:aistudio /app/packages/db/package.json ./packages/db/
 COPY --from=builder --chown=aistudio:aistudio /app/packages/db/src/migrations ./packages/db/dist/migrations
-
 COPY --from=builder --chown=aistudio:aistudio /app/packages/worker/dist ./packages/worker/dist
 COPY --from=builder --chown=aistudio:aistudio /app/packages/worker/package.json ./packages/worker/
 

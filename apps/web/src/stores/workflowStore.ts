@@ -9,6 +9,7 @@ import type {
 import type { RunDebugSnapshot } from "@aistudio/engine";
 import type { NodeLatestOutput } from "@/lib/runOutputs";
 import { computeStaleFromNode } from "@/lib/staleness";
+import { readBudgetCapFromStorage } from "@/hooks/useBudgetSettings";
 import type { NormalizedNodeRunState } from "@/lib/nodeRunState";
 import type { NodeExecutionSummary } from "@/lib/nodeExecutionSummary";
 import {
@@ -155,7 +156,7 @@ interface WorkflowState {
   setDebugSnapshot: (snapshot: RunDebugSnapshot | null) => void;
   setCurrentRunId: (runId: string | null) => void;
   saveGraph: () => Promise<void>;
-  runWorkflow: () => Promise<void>;
+  runWorkflow: (opts?: { budgetCap?: number }) => Promise<void>;
   setAutoRunEnabled: (enabled: boolean) => void;
   setLatestOutputsByNode: (map: Record<string, NodeLatestOutput>) => void;
   markNodeAndDownstreamStale: (nodeId: string) => void;
@@ -501,7 +502,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     }));
   },
 
-  runWorkflow: async () => {
+  runWorkflow: async (opts) => {
     const { meta, dirty } = get();
     if (!meta) return;
 
@@ -512,9 +513,17 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         await get().saveGraph();
       }
 
+      // Resolve budget cap: explicit opt > localStorage default.
+      // Always include so the engine can enforce it at runtime.
+      const budgetCap: number =
+        opts?.budgetCap !== undefined
+          ? opts.budgetCap
+          : readBudgetCapFromStorage();
+
       const res = await fetch(`/api/workflows/${meta.id}/runs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ budgetCap }),
       });
       if (!res.ok) throw new Error(`Failed to start run: ${res.status}`);
       const { id: runId } = (await res.json()) as { id: string };

@@ -158,6 +158,12 @@ export const imageGenerationNode: NodeDefinition = {
   },
 
   runtimeKind: NodeRuntimeKind.Provider,
+  // Default provider — used when a workflow node has the generic "image-generation"
+  // type rather than a model-specific type (e.g. nodes created from starter graphs).
+  provider: {
+    providerId: "fal",
+    modelId: "fal-ai/flux-pro/v1.1",
+  },
   tags: ["generation", "image"],
   isAvailable: true,
 };
@@ -202,6 +208,12 @@ export const videoGenerationNode: NodeDefinition = {
   },
 
   runtimeKind: NodeRuntimeKind.Provider,
+  // Default provider — used when a workflow node has the generic "video-generation"
+  // type rather than a model-specific type.
+  provider: {
+    providerId: "fal",
+    modelId: "fal-ai/kling-video/v1.6/standard/text-to-video",
+  },
   tags: ["generation", "video"],
   isAvailable: true,
 };

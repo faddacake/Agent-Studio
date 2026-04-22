@@ -52,6 +52,12 @@ export const ExportSceneEntrySchema = z.object({
   fadeStartMs: z.number().min(0),
   /** Text overlay payload, or null when the scene has no overlay. */
   textOverlay: ExportTextOverlaySchema.nullable(),
+  /**
+   * Trim start offset in milliseconds — where in the source clip playback begins.
+   * 0 or absent means from the clip start. Only meaningful for video scenes.
+   * The trim window is [trimStartMs, trimStartMs + durationMs].
+   */
+  trimStartMs: z.number().min(0).optional(),
 });
 
 export type ExportSceneEntry = z.infer<typeof ExportSceneEntrySchema>;
@@ -67,6 +73,20 @@ export const ExportJobPayloadSchema = z.object({
   totalDurationMs: z.number().positive(),
   /** Ordered scene entries; at least one scene is required. */
   scenes: z.array(ExportSceneEntrySchema).min(1),
+  /**
+   * Optional audio/voiceover track to mix into the exported video.
+   * Artifact path is served via /api/artifacts?path=<src>.
+   */
+  audioTrack: z.object({
+    src: z.string().min(1),
+    volume: z.number().min(0).max(1),
+  }).optional(),
+  /**
+   * When true, the renderer should produce a fast low-resolution proxy
+   * (e.g. 480p, limited to the first 30 s of the timeline).
+   * Omitted or false for full-quality exports.
+   */
+  isPreview: z.boolean().optional(),
 });
 
 export type ExportJobPayload = z.infer<typeof ExportJobPayloadSchema>;

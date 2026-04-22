@@ -29,6 +29,29 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  worker:
+    command: pnpm --filter @aistudio/worker dev
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - DATA_DIR=/data
+      - API_BASE_URL=http://app:3000
+      - NODE_ENV=development
+      - HOME=/tmp
+      - COREPACK_HOME=/tmp/corepack
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - app_data:/data
+    depends_on:
+      redis:
+        condition: service_healthy
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+
   redis:
     image: redis:7-alpine
     volumes:

@@ -354,8 +354,14 @@ export class RunCoordinator {
         nodeType: execNode.type,
         inputs,
         params: execNode.data.params,
-        providerId: execNode.data.providerId,
-        modelId: execNode.data.modelId,
+        // params.providerId/modelId (set by the InspectorPanel picker) take
+        // precedence over data-level values (set by the node definition default).
+        providerId:
+          (execNode.data.params.providerId as string | undefined) ??
+          execNode.data.providerId,
+        modelId:
+          (execNode.data.params.modelId as string | undefined) ??
+          execNode.data.modelId,
         attempt: nodeState.attempt,
       });
     }

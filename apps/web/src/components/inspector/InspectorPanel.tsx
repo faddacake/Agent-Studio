@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import type { WorkflowNode, WorkflowEdge } from "@aistudio/shared";
 import { imageInputNode, promptTemplateNode } from "@aistudio/shared";
 import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 import { NodeConfig } from "./NodeConfig";
 import { useWorkflowStore } from "@/stores/workflowStore";
-import { formatDuration, formatCost } from "@/lib/formatExecution";
+import { formatDuration, formatCost, humanizeNodeError } from "@/lib/formatExecution";
 import type { ExecutionStatus } from "@/lib/nodeExecutionSummary";
 import { canRetry } from "@/lib/retryRun";
 import { ArtifactPreviewPanel } from "@/components/prompt/ArtifactPreviewPanel";
@@ -16,6 +16,7 @@ import { createWorkflowNode } from "@/components/canvas/createWorkflowNode";
 import { getSuggestions } from "@/lib/suggestions";
 import type { Suggestion } from "@/lib/suggestions";
 import { findCompatibleInputPort } from "@/lib/portCompatibility";
+import { getSupportedModels, type ModelOption } from "@/config/models";
 
 type InspectorTab = "config" | "ports" | "run";
 
@@ -120,6 +121,7 @@ export function InspectorPanel({ selectedNode, onParamChange, onClose }: Inspect
           <>
             <ProvenanceBadge node={selectedNode} />
             <PresetBar node={selectedNode} onParamChange={onParamChange} />
+            <ProviderModelPicker node={selectedNode} onParamChange={onParamChange} />
             <NodeConfig node={selectedNode} onParamChange={onParamChange} />
             <LatestOutputSection node={selectedNode} />
             <LastRunSection node={selectedNode} />
@@ -171,6 +173,128 @@ function ProvenanceBadge({ node }: { node: WorkflowNode }) {
       >
         {shortRunId}
       </Link>
+    </div>
+  );
+}
+
+// ── Provider & Model picker ──
+
+const NODE_TYPE_TO_CATEGORY: Record<string, "image" | "video"> = {
+  "image-generation": "image",
+  "video-generation": "video",
+};
+
+const PROVIDER_LABELS: Record<string, string> = {
+  fal: "fal.ai",
+  replicate: "Replicate",
+};
+
+function ProviderModelPicker({
+  node,
+  onParamChange,
+}: {
+  node: WorkflowNode;
+  onParamChange: (nodeId: string, key: string, value: unknown) => void;
+}) {
+  // ── Hooks first (before any early returns) ──────────────────────────────────
+  // null = fetch not yet complete; Set = configured provider IDs
+  const [configuredProviders, setConfiguredProviders] = useState<Set<string> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/providers")
+      .then((r) => r.ok ? (r.json() as Promise<Array<{ id: string }>>) : Promise.reject())
+      .then((data) => setConfiguredProviders(new Set(data.map((p) => p.id))))
+      .catch(() => setConfiguredProviders(new Set()));
+  }, []);
+
+  // ── Derive category from node type ──────────────────────────────────────────
+  const category = NODE_TYPE_TO_CATEGORY[node.type];
+  if (!category) return null;
+
+  // Build provider → model list and adapterModelId → ModelOption lookup in one pass.
+  const modelsByProvider: Record<string, { id: string; label: string }[]> = {};
+  const modelByAdapterId: Record<string, ModelOption> = {};
+  for (const m of getSupportedModels(category)) {
+    if (!modelsByProvider[m.provider]) modelsByProvider[m.provider] = [];
+    modelsByProvider[m.provider].push({ id: m.adapterModelId, label: m.name });
+    modelByAdapterId[m.adapterModelId] = m;
+  }
+
+  const availableProviders = Object.keys(modelsByProvider).map((id) => ({
+    id,
+    label: PROVIDER_LABELS[id] ?? id,
+  }));
+  if (availableProviders.length === 0) return null;
+
+  const currentProvider =
+    (node.data.params.providerId as string | undefined) ?? availableProviders[0].id;
+  const models = modelsByProvider[currentProvider] ?? [];
+  const currentModel =
+    (node.data.params.modelId as string | undefined) ?? models[0]?.id ?? "";
+
+  // configuredProviders === null while fetch is in flight — don't warn yet.
+  const providerIsConfigured =
+    configuredProviders === null || configuredProviders.has(currentProvider);
+
+  /** Apply modelId + all defaultParams for the given adapterModelId. */
+  const applyModel = (adapterId: string) => {
+    onParamChange(node.id, "modelId", adapterId);
+    const modelOption = modelByAdapterId[adapterId];
+    if (modelOption) {
+      for (const [key, value] of Object.entries(modelOption.defaultParams)) {
+        onParamChange(node.id, key, value);
+      }
+    }
+  };
+
+  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newProvider = e.target.value;
+    onParamChange(node.id, "providerId", newProvider);
+    const firstAdapterId = modelsByProvider[newProvider]?.[0]?.id ?? "";
+    applyModel(firstAdapterId);
+  };
+
+  return (
+    <div className="mx-3 mt-3 mb-1">
+      <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+        Provider &amp; Model
+      </h4>
+      <div className="flex flex-col gap-2">
+        <select
+          value={currentProvider}
+          onChange={handleProviderChange}
+          className="w-full cursor-pointer rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-xs text-neutral-300 outline-none"
+        >
+          {availableProviders.map((p) => (
+            <option key={p.id} value={p.id}>{p.label}</option>
+          ))}
+        </select>
+        <select
+          value={currentModel}
+          onChange={(e) => applyModel(e.target.value)}
+          className="w-full cursor-pointer rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-xs text-neutral-300 outline-none"
+        >
+          {models.map((m) => (
+            <option key={m.id} value={m.id}>{m.label}</option>
+          ))}
+        </select>
+        {currentModel && modelByAdapterId[currentModel] && (
+          <p className="text-[10px] text-neutral-600">
+            ≈ ${modelByAdapterId[currentModel].estimatedCost.toFixed(3)} / {category === "video" ? "clip" : "image"}
+          </p>
+        )}
+        {!providerIsConfigured && (
+          <p className="text-[10px] leading-snug text-amber-500/90">
+            No {PROVIDER_LABELS[currentProvider] ?? currentProvider} API key —{" "}
+            <Link
+              href="/settings/providers"
+              className="underline decoration-dotted underline-offset-2 hover:text-amber-400 transition-colors"
+            >
+              Add key →
+            </Link>
+          </p>
+        )}
+      </div>
     </div>
   );
 }
@@ -253,14 +377,22 @@ function LastRunSection({ node }: { node: WorkflowNode }) {
             </div>
           )}
         </div>
-        {/* Error line */}
-        {summary.status === "failed" && summary.shortError && (
-          <div className="border-t border-red-900/30 px-2 py-1.5">
-            <pre className="whitespace-pre-wrap break-words font-mono text-[10px] leading-snug text-red-300">
-              {summary.shortError}
-            </pre>
-          </div>
-        )}
+        {/* Error line — humanized with recovery suggestion */}
+        {summary.status === "failed" && summary.shortError && (() => {
+          const { message, suggestion } = humanizeNodeError(summary.shortError);
+          return (
+            <div className="border-t border-red-900/30 px-2 py-1.5">
+              <p className="whitespace-pre-wrap break-words text-[11px] leading-snug text-red-300">
+                {message}
+              </p>
+              {suggestion && (
+                <p className="mt-1 text-[10px] leading-relaxed text-neutral-500">
+                  {suggestion}
+                </p>
+              )}
+            </div>
+          );
+        })()}
         {/* Footer: Open Run + Retry */}
         {(showRunLink || showRetry) && (
           <div className="flex items-center gap-2 border-t border-neutral-800/80 px-2 py-1.5">
@@ -295,7 +427,18 @@ function LastRunSection({ node }: { node: WorkflowNode }) {
 // ── Suggestions section ──
 
 function SuggestionsSection({ node }: { node: WorkflowNode }) {
-  const graph = useWorkflowStore((s) => s.getWorkflowGraph());
+  // Subscribe to stable primitives; build graph in useMemo to avoid returning a
+  // new object literal from inside the selector (triggers "getSnapshot should be
+  // cached" warning and unnecessary re-renders in React strict mode).
+  const nodes = useWorkflowStore((s) => s.nodes);
+  const edges = useWorkflowStore((s) => s.edges);
+  const graph = useMemo(
+    () => useWorkflowStore.getState().getWorkflowGraph(),
+    // nodes/edges are replaced by reference on every store mutation, so this
+    // recomputes only when the actual graph data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [nodes, edges],
+  );
   const suggestions = getSuggestions(node, graph);
 
   if (suggestions.length === 0) return null;

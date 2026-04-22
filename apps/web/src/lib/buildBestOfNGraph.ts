@@ -6,7 +6,6 @@
  * there is only one node; the prompt is passed via params.prompt so that
  * executeBestOfN can find it even without an upstream prompt node.
  */
-import { randomUUID } from "node:crypto";
 import type { WorkflowGraph } from "@aistudio/shared";
 
 export interface BestOfNConfig {
@@ -19,7 +18,7 @@ export interface BestOfNConfig {
 }
 
 export function buildBestOfNGraph(config: BestOfNConfig): WorkflowGraph {
-  const nodeId = randomUUID();
+  const nodeId = crypto.randomUUID();
 
   const params: Record<string, unknown> = {
     __nodeType: "best-of-n",
