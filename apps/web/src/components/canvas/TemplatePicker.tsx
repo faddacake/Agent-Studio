@@ -3,16 +3,16 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import {
   templatePackLoader,
-  registerBuiltInPacks,
   parseTemplatePack,
   type TemplateEntry,
   type TemplatePack,
   type PackAvailability,
   type TemplatePackSource,
-} from "@aistudio/shared";
-import type { WorkflowGraph } from "@aistudio/shared";
+} from "@iterastudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 import { MiniGraphPreview } from "./MiniGraphPreview";
-import { rehydratePersistedPacks, persistPack } from "@/lib/templatePackStorage";
+import { persistPack } from "@/lib/templatePackStorage";
+import { ensurePacksLoaded } from "@/lib/initTemplatePacks";
 
 // ── DB template row shape returned by GET /api/templates ──
 
@@ -32,18 +32,7 @@ interface DbTemplateMeta {
 }
 
 // ── Load built-in packs + rehydrate persisted packs on first import ──
-
-import socialContentPipeline from "../../../../../templates/packs/social-content-pipeline.json";
-import imageGenStarter from "../../../../../templates/packs/image-gen-starter.json";
-import videoCreationStarters from "../../../../../templates/packs/video-creation-starters.json";
-
-let packsRegistered = false;
-function ensurePacksLoaded() {
-  if (packsRegistered) return;
-  packsRegistered = true;
-  registerBuiltInPacks([imageGenStarter, socialContentPipeline, videoCreationStarters]);
-  rehydratePersistedPacks();
-}
+// Initialization is handled by initTemplatePacks.ts (shared with WorkflowEmptyState).
 
 // ── Filter types ──
 
@@ -294,7 +283,26 @@ export function TemplatePicker({ open, onClose, onSelect, refreshKey = 0 }: Temp
   const handleSelect = useCallback(
     (item: EnrichedTemplate) => {
       const displayName = formatTemplateName(item.entry.name);
-      onSelect(item.entry.graph, displayName);
+      const defaultPrompt = item.pack.manifest.defaultPrompts?.[item.entry.id];
+
+      // Inject the default example prompt into the first prompt-template node so
+      // the workflow is immediately runnable without the user needing to edit any node.
+      let graph = item.entry.graph;
+      if (defaultPrompt) {
+        const promptNodeIndex = graph.nodes.findIndex((n) => n.type === "prompt-template");
+        if (promptNodeIndex !== -1) {
+          graph = {
+            ...graph,
+            nodes: graph.nodes.map((n, i) =>
+              i === promptNodeIndex
+                ? { ...n, data: { ...n.data, params: { ...n.data.params, template: defaultPrompt } } }
+                : n,
+            ),
+          };
+        }
+      }
+
+      onSelect(graph, displayName);
       onClose();
     },
     [onSelect, onClose],
