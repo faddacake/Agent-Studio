@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, lazy, Suspense, Component, type ReactNode, type KeyboardEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -28,7 +28,9 @@ import { useRunEvents } from "@/hooks/useRunEvents";
 import { isConnectionValid } from "@/lib/connectionValidation";
 import { NodePalette } from "./NodePalette";
 import { TemplatePicker } from "./TemplatePicker";
-import { WorkflowEmptyState } from "./WorkflowEmptyState";
+const WorkflowEmptyState = lazy(() =>
+  import("./WorkflowEmptyState").then((m) => ({ default: m.WorkflowEmptyState }))
+);
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SaveRevisionDialog } from "./SaveRevisionDialog";
 import { SaveFragmentDialog } from "./SaveFragmentDialog";
@@ -83,6 +85,21 @@ const TERMINAL_BADGE: Record<string, { label: string; colorClass: string }> = {
   cancelled:       { label: "— Cancelled",        colorClass: "border-yellow-500 bg-yellow-500/10 text-yellow-400" },
   budget_exceeded: { label: "— Budget Exceeded",  colorClass: "border-yellow-500 bg-yellow-500/10 text-yellow-400" },
 };
+
+// ── Error boundary: isolates WorkflowEmptyState failures from the canvas ──
+
+class EmptyStateBoundary extends Component<
+  { children: ReactNode; onError: () => void },
+  { hasError: boolean }
+> {
+  constructor(props: { children: ReactNode; onError: () => void }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch() { this.props.onError(); }
+  render() { return this.state.hasError ? null : this.props.children; }
+}
 
 // ── Inner canvas (needs ReactFlowProvider ancestor) ──
 
@@ -1151,11 +1168,15 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
 
         {/* Empty state — welcoming panel with featured templates */}
         {nodes.length === 0 && !emptyStateDismissed && (
-          <WorkflowEmptyState
-            onSelectTemplate={handleTemplateSelect}
-            onOpenGallery={toggleTemplatePicker}
-            onStartBlank={() => setEmptyStateDismissed(true)}
-          />
+          <EmptyStateBoundary onError={() => setEmptyStateDismissed(true)}>
+            <Suspense fallback={null}>
+              <WorkflowEmptyState
+                onSelectTemplate={handleTemplateSelect}
+                onOpenGallery={toggleTemplatePicker}
+                onStartBlank={() => setEmptyStateDismissed(true)}
+              />
+            </Suspense>
+          </EmptyStateBoundary>
         )}
         <ReactFlow
           nodes={nodes}
