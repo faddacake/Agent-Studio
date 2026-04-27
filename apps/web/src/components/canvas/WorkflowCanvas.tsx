@@ -15,9 +15,10 @@ import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type { Connection, Edge, Node, OnBeforeDelete } from "@xyflow/react";
-import type { WorkflowNode, WorkflowGraph } from "@aistudio/shared";
-import { nodeRegistry, type NodeDefinition } from "@aistudio/shared";
-import type { WorkflowEdge } from "@aistudio/shared";
+import type { WorkflowNode, WorkflowGraph } from "@iterastudio/shared";
+import { nodeRegistry, isArtifactRef, type NodeDefinition } from "@iterastudio/shared";
+import type { WorkflowEdge } from "@iterastudio/shared";
+import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 import { useWorkflowStore, fromFlowNode } from "@/stores/workflowStore";
 import { filterPresets } from "@/lib/presets";
 import type { Preset } from "@/lib/presets";
@@ -27,6 +28,7 @@ import { useRunEvents } from "@/hooks/useRunEvents";
 import { isConnectionValid } from "@/lib/connectionValidation";
 import { NodePalette } from "./NodePalette";
 import { TemplatePicker } from "./TemplatePicker";
+import { WorkflowEmptyState } from "./WorkflowEmptyState";
 import { SaveAsTemplateDialog } from "./SaveAsTemplateDialog";
 import { SaveRevisionDialog } from "./SaveRevisionDialog";
 import { SaveFragmentDialog } from "./SaveFragmentDialog";
@@ -155,6 +157,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   const [schedulePanelOpen, setSchedulePanelOpen] = useState(false);
   const scheduleBtnRef = useRef<HTMLButtonElement | null>(null);
   const [scheduleActive, setScheduleActive] = useState(false);
+  const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
 
   // ── Schedule active state — drives indicator on Schedule button ──────────
   // Fetches once when the workflow loads; updated in real-time via SchedulePanel.
@@ -179,7 +182,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
       fetch("/api/providers")
         .then((r) => r.ok ? r.json() : [])
         .then((rows: unknown[]) => setHasNoProviders(rows.length === 0))
-        .catch(() => {});
+        .catch(() => setHasNoProviders(false));
     }
     checkProviders();
     function onVisibility() { if (document.visibilityState === "visible") checkProviders(); }
@@ -254,6 +257,16 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
 
   // ── Template refresh key — incremented after a successful Save as Template ──
   const [templateRefreshKey, setTemplateRefreshKey] = useState(0);
+
+  // ── Template load sequence — incremented to trigger fitView after load ────
+  const [templateLoadSeq, setTemplateLoadSeq] = useState(0);
+  const templateLoadMountedRef = useRef(false);
+
+  // ── Post-run artifacts — drives floating "Send to Video Editor" FAB ───────
+  const [postRunArtifacts, setPostRunArtifacts] = useState<
+    Array<{ type: "image" | "video"; path: string }>
+  >([]);
+  const [sendingFromCanvas, setSendingFromCanvas] = useState(false);
 
   // ── Slash command menu ────────────────────────────────────────────────────
   const [slashOpen, setSlashOpen] = useState(false);
@@ -376,7 +389,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   const [fragmentBrowserOpen, setFragmentBrowserOpen] = useState(false);
   const { getNodes } = useReactFlow();
 
-  const getSelectedFragment = useCallback((): import("@aistudio/shared").WorkflowGraph => {
+  const getSelectedFragment = useCallback((): import("@iterastudio/shared").WorkflowGraph => {
     const selected = getNodes().filter((n) => n.selected);
     const selectedIds = new Set(selected.map((n) => n.id));
     const selectedEdges = edges.filter(
@@ -396,7 +409,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   }, [getNodes, edges]);
 
   const handleInsertFragmentGraph = useCallback(
-    (graph: import("@aistudio/shared").WorkflowGraph) => {
+    (graph: import("@iterastudio/shared").WorkflowGraph) => {
       insertFragment(graph, 120, 120);
     },
     [insertFragment],
@@ -410,7 +423,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
     fragmentInsertedRef.current = true;
     fetch("/api/fragments")
       .then((r) => (r.ok ? r.json() : null))
-      .then((list: Array<{ id: string; graph: import("@aistudio/shared").WorkflowGraph }> | null) => {
+      .then((list: Array<{ id: string; graph: import("@iterastudio/shared").WorkflowGraph }> | null) => {
         if (!list) return;
         const match = list.find((f) => f.id === initialFragmentId);
         if (match) insertFragment(match.graph, 120, 120);
@@ -456,7 +469,9 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   } | null>(null);
   const badgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Detect transition to terminal status → show badge + update meta run status
+  // Detect transition to terminal status → show badge + update meta run status.
+  // On "completed", open the debugger panel and switch to the Outputs tab so the
+  // "Send to Video Editor" button is immediately visible without extra clicks.
   useEffect(() => {
     const status = debugSnapshot?.status;
     if (!status) return;
@@ -470,6 +485,12 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
       setRunBadge(null);
       badgeTimerRef.current = null;
     }, 3000);
+
+    if (status === "completed") {
+      // Surface outputs automatically — open debugger if closed, switch to Outputs tab.
+      if (!debuggerOpen) toggleDebugger();
+      setActiveDebugTab("outputs");
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugSnapshot?.status]);
 
@@ -494,6 +515,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   // Inspector and clear all stale indicators. partial_failure means the workflow
   // executed — some nodes may have produced output — so stale marks are now stale
   // data about a pre-run state and should be cleared just as for a full completion.
+  // On "completed" also extract artifact refs to drive the floating FAB.
   useEffect(() => {
     const snapshot = debugSnapshot;
     if (!snapshot) return;
@@ -508,6 +530,22 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
       .then((data) => {
         if (!data?.outputs) return;
         setLatestOutputsByNode(buildOutputsMap(data.outputs, rId, wfId));
+
+        if (status === "completed") {
+          const artifacts: Array<{ type: "image" | "video"; path: string }> = [];
+          for (const { outputs } of data.outputs) {
+            for (const value of Object.values(outputs)) {
+              if (isArtifactRef(value)) {
+                if (value.mimeType.startsWith("image/")) artifacts.push({ type: "image", path: value.path });
+                else if (value.mimeType.startsWith("video/")) artifacts.push({ type: "video", path: value.path });
+              } else {
+                for (const ref of extractImageRefs(value)) artifacts.push({ type: "image", path: ref.path });
+                for (const ref of extractVideoRefs(value)) artifacts.push({ type: "video", path: ref.path });
+              }
+            }
+          }
+          setPostRunArtifacts(artifacts);
+        }
       })
       .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -525,12 +563,14 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugSnapshot?.status]);
 
-  // Clear persisted node run states and execution summaries when a new run starts
-  // so stale badges don't linger on nodes that haven't been reached yet.
+  // Clear persisted node run states, execution summaries, and the post-run FAB
+  // when a new run starts so stale badges and buttons don't linger.
   useEffect(() => {
     if (debugSnapshot?.status !== "running") return;
     clearNodeRunStates();
     clearLatestExecutionByNode();
+    setPostRunArtifacts([]);
+    setSendingFromCanvas(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugSnapshot?.status]);
 
@@ -677,7 +717,37 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
     };
   }, [meta?.id, updateMetaRunStatus]);
 
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, fitView } = useReactFlow();
+
+  // Send all post-run artifacts to the Video Editor — creates an editor project
+  // and navigates there. Mirrors the logic in RunOutputsPanel but operates on
+  // the canvas-level postRunArtifacts state so the FAB works independently.
+  const handleSendFromCanvas = useCallback(async () => {
+    if (sendingFromCanvas || postRunArtifacts.length === 0 || !currentRunId) return;
+    setSendingFromCanvas(true);
+    try {
+      const scenes = postRunArtifacts.map((a) => ({
+        id: crypto.randomUUID(),
+        type: a.type,
+        src: a.path,
+        duration: a.type === "video" ? 10 : 5,
+      }));
+      const res = await fetch("/api/editor-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: `Run ${currentRunId.slice(0, 8)}`,
+          aspectRatio: "16:9",
+          scenes,
+        }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const project = (await res.json()) as { id: string };
+      router.push(`/editor/${project.id}`);
+    } catch {
+      setSendingFromCanvas(false);
+    }
+  }, [sendingFromCanvas, postRunArtifacts, currentRunId, router]);
 
   // Wire up the slash selectors now that screenToFlowPosition is available
   const PRESET_STEP = 240;
@@ -855,13 +925,37 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
     (graph: WorkflowGraph, name: string) => {
       const meta = useWorkflowStore.getState().meta;
       if (meta) {
-        loadWorkflow(meta, graph);
+        // Clear run status so the status dot doesn't show a stale state from the previous graph.
+        loadWorkflow({ ...meta, lastRunStatus: null, lastRunAt: null }, graph);
       } else {
         loadWorkflow({ id: crypto.randomUUID(), name, description: "", lastRunStatus: null, lastRunAt: null, revisionCount: 0 }, graph);
       }
+      // Clear any post-run FAB from the previous graph so it doesn't appear on the new template.
+      setPostRunArtifacts([]);
+      setSendingFromCanvas(false);
+      setTemplateLoadSeq((s) => s + 1);
     },
     [loadWorkflow],
   );
+
+  // Fit the viewport around all nodes after a template is loaded.
+  // Two staggered calls: the first fires before React Flow has measured all
+  // nodes (giving a rough snap), the second fires after measurement is complete
+  // and produces the final accurate centered view.
+  // Skips the initial mount (seq = 0) so it only fires on actual template loads.
+  useEffect(() => {
+    if (!templateLoadMountedRef.current) {
+      templateLoadMountedRef.current = true;
+      return;
+    }
+    // Three staggered calls: rough snap (before measurement) → post-measurement
+    // accurate center → final safety snap for slow/complex templates.
+    const id1 = setTimeout(() => { fitView({ duration: 200, padding: 0.22 }); }, 80);
+    const id2 = setTimeout(() => { fitView({ duration: 300, padding: 0.22 }); }, 420);
+    const id3 = setTimeout(() => { fitView({ duration: 250, padding: 0.22 }); }, 900);
+    return () => { clearTimeout(id1); clearTimeout(id2); clearTimeout(id3); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateLoadSeq]);
 
   const handleTemplateSelect = useCallback(
     (graph: WorkflowGraph, name: string) => {
@@ -1055,27 +1149,13 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           </div>
         )}
 
-        {/* Empty-state hint — visible only when the canvas has no nodes */}
-        {nodes.length === 0 && (
-          <div
-            className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center"
-            aria-hidden="true"
-          >
-            <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-800 bg-neutral-900/80 px-8 py-6 text-center backdrop-blur-sm">
-              <p className="text-sm font-semibold text-neutral-300">Canvas is empty</p>
-              <p className="text-xs leading-relaxed text-neutral-500">
-                Add a node from the panel on the left, or start with a{" "}
-                <button
-                  type="button"
-                  onClick={toggleTemplatePicker}
-                  className="pointer-events-auto font-medium text-neutral-300 underline underline-offset-2 hover:text-white"
-                >
-                  Template
-                </button>
-                .
-              </p>
-            </div>
-          </div>
+        {/* Empty state — welcoming panel with featured templates */}
+        {nodes.length === 0 && !emptyStateDismissed && (
+          <WorkflowEmptyState
+            onSelectTemplate={handleTemplateSelect}
+            onOpenGallery={toggleTemplatePicker}
+            onStartBlank={() => setEmptyStateDismissed(true)}
+          />
         )}
         <ReactFlow
           nodes={nodes}
@@ -1108,345 +1188,388 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
         </ReactFlow>
 
         {/* Top bar: workflow controls + health strip */}
-        <div className="absolute left-3 top-3 z-10 flex flex-col items-start gap-1">
-        <div className="flex items-center gap-2">
-          <Link
-            href="/workflows"
-            className="text-xs text-neutral-500 transition-colors hover:text-neutral-300"
-            title="Back to workflows"
-          >
-            ← Workflows
-          </Link>
-          {meta && (
+        <div className="absolute left-3 right-2 top-3 z-10 flex flex-col items-start gap-1">
+
+          {/* ── Row 1: navigation · identity · run controls ── */}
+          <div className="flex items-center gap-2">
             <Link
-              href={`/workflows/${meta.id}/history`}
-              className="mr-1 text-xs text-neutral-500 transition-colors hover:text-neutral-300"
-              title="View run history"
+              href="/workflows"
+              className="text-xs text-neutral-500 transition-colors hover:text-neutral-300"
+              title="Back to workflows"
             >
-              Run History
+              ← Workflows
             </Link>
-          )}
-          {meta && (
-            <Link
-              href={`/workflows/${meta.id}/library`}
-              className="mr-1 text-xs text-neutral-500 transition-colors hover:text-neutral-300"
-              title="Workflow Library — fragments, checkpoints, artifacts, templates"
-            >
-              Library
-            </Link>
-          )}
-          {editingName ? (
-            <input
-              type="text"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
-              onBlur={handleCommitRename}
-              onKeyDown={handleNameKeyDown}
-              // eslint-disable-next-line jsx-a11y/no-autofocus
-              autoFocus
-              className="mr-1 w-[180px] rounded border border-neutral-600 bg-neutral-800 px-1.5 py-0.5 text-xs font-medium text-neutral-200 outline-none focus:border-neutral-500"
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={handleStartRename}
-              title="Click to rename"
-              className="mr-1 max-w-[200px] cursor-text truncate rounded px-1.5 py-0.5 text-xs font-medium text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-            >
-              {meta?.name ?? "Untitled workflow"}
-            </button>
-          )}
-          {meta && (
-            <span
-              className="flex items-center gap-1.5 text-xs text-neutral-500 select-none"
-              title={meta.lastRunStatus
-                ? `Last run: ${meta.lastRunStatus.replace(/_/g, " ")}${meta.lastRunAt ? ` · ${formatRunTime(meta.lastRunAt)}` : ""}`
-                : "No runs yet"}
-            >
-              <span
-                className="inline-block h-2 w-2 shrink-0 rounded-full"
-                style={{
-                  backgroundColor: meta.lastRunStatus
-                    ? (RUN_STATUS_COLOR[meta.lastRunStatus] ?? "#737373")
-                    : "#404040",
-                }}
+            {meta && (
+              <Link
+                href={`/workflows/${meta.id}/history`}
+                className="text-xs text-neutral-500 transition-colors hover:text-neutral-300"
+                title="View run history"
+              >
+                Run History
+              </Link>
+            )}
+            {meta && (
+              <Link
+                href={`/workflows/${meta.id}/library`}
+                className="text-xs text-neutral-500 transition-colors hover:text-neutral-300"
+                title="Workflow Library — fragments, checkpoints, artifacts, templates"
+              >
+                Library
+              </Link>
+            )}
+            {editingName ? (
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onBlur={handleCommitRename}
+                onKeyDown={handleNameKeyDown}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+                className="w-[180px] rounded border border-neutral-600 bg-neutral-800 px-1.5 py-0.5 text-xs font-medium text-neutral-200 outline-none focus:border-neutral-500"
               />
-              <span className="capitalize">
-                {meta.lastRunStatus
-                  ? `${meta.lastRunStatus.replace(/_/g, " ")}${meta.lastRunAt ? ` · ${formatRunTime(meta.lastRunAt)}` : ""}`
+            ) : (
+              <button
+                type="button"
+                onClick={handleStartRename}
+                title="Click to rename"
+                className="max-w-[200px] cursor-text truncate rounded px-1.5 py-0.5 text-xs font-medium text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+              >
+                {meta?.name ?? "Untitled workflow"}
+              </button>
+            )}
+            {meta && (
+              <span
+                className="flex items-center gap-1.5 text-xs text-neutral-500 select-none"
+                title={meta.lastRunStatus
+                  ? `Last run: ${meta.lastRunStatus.replace(/_/g, " ")}${meta.lastRunAt ? ` · ${formatRunTime(meta.lastRunAt)}` : ""}`
                   : "No runs yet"}
-              </span>
-            </span>
-          )}
-          {meta && meta.revisionCount > 0 && (
-            <span className="text-xs text-neutral-600 select-none" title="Saved revision checkpoints">
-              {meta.revisionCount} {meta.revisionCount === 1 ? "checkpoint" : "checkpoints"}
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={toggleTemplatePicker}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              templatePickerOpen
-                ? "border-purple-500 bg-purple-500/10 text-purple-400"
-                : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
-            }`}
-          >
-            Templates
-          </button>
-          <button
-            type="button"
-            onClick={toggleDebugger}
-            title="Show live node execution status and run outputs"
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              debuggerOpen
-                ? "border-blue-500 bg-blue-500/10 text-blue-400"
-                : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
-            }`}
-          >
-            Debugger
-          </button>
-          <button
-            type="button"
-            onClick={undo}
-            disabled={!canUndo}
-            title={canUndo ? "Undo" : "Nothing to undo"}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              canUndo
-                ? "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-                : "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
-            }`}
-          >
-            Undo <span className="opacity-50">⌘Z</span>
-          </button>
-          <button
-            type="button"
-            onClick={redo}
-            disabled={!canRedo}
-            title={canRedo ? "Redo" : "Nothing to redo"}
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              canRedo
-                ? "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-                : "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
-            }`}
-          >
-            Redo <span className="opacity-50">⌘⇧Z</span>
-          </button>
-          <button
-            type="button"
-            onClick={saveGraph}
-            disabled={!dirty || saving}
-            title={
-              saving ? "Saving…" :
-              !dirty ? "No unsaved changes" :
-              undefined
-            }
-            className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              dirty && !saving
-                ? "border-blue-500 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
-                : "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
-            }`}
-          >
-            {saving ? "Saving…" : dirty ? (<>Save <span className="opacity-50">⌘S</span></>) : "Saved"}
-          </button>
-          <button
-            type="button"
-            onClick={toggleSaveAsTemplate}
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
-          >
-            Save as Template
-          </button>
-          <button
-            type="button"
-            onClick={() => setSaveRevisionOpen(true)}
-            disabled={!meta}
-            title={!meta ? "No workflow loaded" : "Save a named revision checkpoint"}
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
-          >
-            Save Revision
-          </button>
-          <button
-            type="button"
-            onClick={() => setSaveFragmentOpen(true)}
-            disabled={getNodes().filter((n) => n.selected).length === 0}
-            title={
-              getNodes().filter((n) => n.selected).length === 0
-                ? "Select nodes on the canvas first"
-                : "Save selected nodes as a reusable fragment"
-            }
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
-          >
-            Save as Fragment
-          </button>
-          <button
-            type="button"
-            onClick={() => setFragmentBrowserOpen(true)}
-            title="Browse and insert a saved fragment"
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
-          >
-            Insert Fragment
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            disabled={!meta || exporting}
-            title={!meta ? "No workflow loaded" : undefined}
-            className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
-          >
-            {exporting ? "Exporting…" : "Export"}
-          </button>
-          {/* Budget settings trigger — turns amber/red after budget_exceeded runs */}
-          <div className="relative">
-            <button
-              ref={budgetBtnRef}
-              type="button"
-              onClick={() => { setSchedulePanelOpen(false); setBudgetPanelOpen((v) => !v); }}
-              title={
-                meta?.lastRunStatus === "budget_exceeded"
-                  ? `Last run hit budget cap ($${budgetCap.toFixed(2)}) — click to adjust`
-                  : `Budget cap: $${budgetCap.toFixed(2)} per run`
-              }
-              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                budgetPanelOpen
-                  ? "border-blue-600 bg-blue-600/10 text-blue-400"
-                  : meta?.lastRunStatus === "budget_exceeded"
-                  ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-              }`}
-              aria-haspopup="dialog"
-              aria-expanded={budgetPanelOpen}
-            >
-              {meta?.lastRunStatus === "budget_exceeded" && (
-                <span aria-hidden="true" className="text-amber-400">⚠</span>
-              )}
-              <span aria-hidden="true">$</span>
-              {budgetCap.toFixed(2)}
-            </button>
-            {budgetPanelOpen && meta && (
-              <BudgetSettingsPanel
-                workflowId={meta.id}
-                onClose={() => setBudgetPanelOpen(false)}
-                anchorRef={budgetBtnRef}
-              />
-            )}
-          </div>
-          <span className="h-4 w-px bg-neutral-700 mx-1" aria-hidden="true" />
-          <button
-            type="button"
-            onClick={handleRun}
-            disabled={isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0 || hasNoProviders}
-            title={
-              isRunning                          ? "Run is starting…"                                                            :
-              debugSnapshot?.status === "running" ? "Run in progress"                                                            :
-              !meta                              ? "No workflow loaded"                                                           :
-              nodes.length === 0                 ? "Add nodes to the canvas first"                                               :
-              hasNoProviders                     ? "Add an API key in Settings → Providers to run workflows"                     :
-              undefined
-            }
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0 || hasNoProviders
-                ? "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
-                : "border-emerald-600 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20"
-            }`}
-          >
-            {/* Live pulse dot — visible only while the run is actively executing */}
-            {(isRunning || debugSnapshot?.status === "running") && (
-              <span
-                className="inline-block h-2 w-2 shrink-0 rounded-full animate-pulse"
-                style={{ backgroundColor: "#60a5fa" }}
-                aria-label="Run in progress"
-              />
-            )}
-            {isRunning || debugSnapshot?.status === "running" ? "Running…" : "Run Workflow"}
-          </button>
-          {/* Auto-Run toggle */}
-          <button
-            type="button"
-            onClick={() => setAutoRunEnabled(!autoRunEnabled)}
-            disabled={!meta || nodes.length === 0 || hasNoProviders}
-            title={
-              hasNoProviders
-                ? "Add an API key in Settings → Providers to enable Auto-Run"
-                : autoRunEnabled
-                  ? "Auto-Run is ON — workflow reruns after parameter edits"
-                  : "Enable Auto-Run — rerun after meaningful edits"
-            }
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              !meta || nodes.length === 0 || hasNoProviders
-                ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-600"
-                : autoRunEnabled
-                  ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
-                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-            }`}
-          >
-            Auto-Run
-          </button>
-          {/* Schedule button */}
-          <div className="relative">
-            <button
-              ref={scheduleBtnRef}
-              type="button"
-              onClick={() => { setBudgetPanelOpen(false); setSchedulePanelOpen((v) => !v); }}
-              disabled={!meta}
-              title={
-                !meta
-                  ? "No workflow loaded"
-                  : scheduleActive
-                  ? "Schedule active — click to edit"
-                  : "Schedule recurring runs"
-              }
-              aria-haspopup="dialog"
-              aria-expanded={schedulePanelOpen}
-              className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                schedulePanelOpen
-                  ? "border-violet-500 bg-violet-500/10 text-violet-400"
-                  : scheduleActive
-                  ? "border-violet-700 bg-violet-700/10 text-violet-400 hover:bg-violet-700/20"
-                  : !meta
-                  ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-600"
-                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
-              }`}
-            >
-              {scheduleActive && (
+              >
                 <span
-                  className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400"
-                  aria-label="Schedule active"
+                  className="inline-block h-2 w-2 shrink-0 rounded-full"
+                  style={{
+                    backgroundColor: meta.lastRunStatus
+                      ? (RUN_STATUS_COLOR[meta.lastRunStatus] ?? "#737373")
+                      : "#404040",
+                  }}
+                />
+                <span className="capitalize">
+                  {meta.lastRunStatus
+                    ? `${meta.lastRunStatus.replace(/_/g, " ")}${meta.lastRunAt ? ` · ${formatRunTime(meta.lastRunAt)}` : ""}`
+                    : "No runs yet"}
+                </span>
+              </span>
+            )}
+            {meta && meta.revisionCount > 0 && (
+              <span className="text-xs text-neutral-600 select-none" title="Saved revision checkpoints">
+                {meta.revisionCount} {meta.revisionCount === 1 ? "checkpoint" : "checkpoints"}
+              </span>
+            )}
+            <span className="h-4 w-px bg-neutral-700" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={handleRun}
+              disabled={isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0 || hasNoProviders}
+              title={
+                isRunning                           ? "Run is starting…"                                           :
+                debugSnapshot?.status === "running" ? "Run in progress"                                           :
+                !meta                               ? "No workflow loaded"                                         :
+                nodes.length === 0                  ? "Add nodes to the canvas first"                             :
+                hasNoProviders                      ? "Add an API key in Settings → Providers to run workflows"   :
+                undefined
+              }
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                isRunning || debugSnapshot?.status === "running" || !meta || nodes.length === 0 || hasNoProviders
+                  ? "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
+                  : "border-emerald-600 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20"
+              }`}
+            >
+              {(isRunning || debugSnapshot?.status === "running") && (
+                <span
+                  className="inline-block h-2 w-2 shrink-0 rounded-full animate-pulse"
+                  style={{ backgroundColor: "#60a5fa" }}
+                  aria-label="Run in progress"
                 />
               )}
-              Schedule
+              {isRunning || debugSnapshot?.status === "running" ? "Running…" : "Run Workflow"}
             </button>
-            {schedulePanelOpen && meta && (
-              <SchedulePanel
-                workflowId={meta.id}
-                onClose={() => setSchedulePanelOpen(false)}
-                anchorRef={scheduleBtnRef}
-                onScheduleChange={setScheduleActive}
-              />
+            <button
+              type="button"
+              onClick={() => setAutoRunEnabled(!autoRunEnabled)}
+              disabled={!meta || nodes.length === 0 || hasNoProviders}
+              title={
+                hasNoProviders
+                  ? "Add an API key in Settings → Providers to enable Auto-Run"
+                  : autoRunEnabled
+                    ? "Auto-Run is ON — workflow reruns after parameter edits"
+                    : "Enable Auto-Run — rerun after meaningful edits"
+              }
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                !meta || nodes.length === 0 || hasNoProviders
+                  ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-600"
+                  : autoRunEnabled
+                    ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+              }`}
+            >
+              Auto-Run
+            </button>
+            {/* Schedule */}
+            <div className="relative">
+              <button
+                ref={scheduleBtnRef}
+                type="button"
+                onClick={() => { setBudgetPanelOpen(false); setSchedulePanelOpen((v) => !v); }}
+                disabled={!meta}
+                title={
+                  !meta ? "No workflow loaded"
+                  : scheduleActive ? "Schedule active — click to edit"
+                  : "Schedule recurring runs"
+                }
+                aria-haspopup="dialog"
+                aria-expanded={schedulePanelOpen}
+                className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  schedulePanelOpen
+                    ? "border-violet-500 bg-violet-500/10 text-violet-400"
+                    : scheduleActive
+                    ? "border-violet-700 bg-violet-700/10 text-violet-400 hover:bg-violet-700/20"
+                    : !meta
+                    ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-600"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+                }`}
+              >
+                {scheduleActive && (
+                  <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-violet-400" aria-label="Schedule active" />
+                )}
+                Schedule
+              </button>
+              {schedulePanelOpen && meta && (
+                <SchedulePanel
+                  workflowId={meta.id}
+                  onClose={() => setSchedulePanelOpen(false)}
+                  anchorRef={scheduleBtnRef}
+                  onScheduleChange={setScheduleActive}
+                />
+              )}
+            </div>
+            {/* Budget */}
+            <div className="relative">
+              <button
+                ref={budgetBtnRef}
+                type="button"
+                onClick={() => { setSchedulePanelOpen(false); setBudgetPanelOpen((v) => !v); }}
+                title={
+                  meta?.lastRunStatus === "budget_exceeded"
+                    ? `Last run hit budget cap ($${budgetCap.toFixed(2)}) — click to adjust`
+                    : `Budget cap: $${budgetCap.toFixed(2)} per run`
+                }
+                className={`inline-flex items-center gap-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  budgetPanelOpen
+                    ? "border-blue-600 bg-blue-600/10 text-blue-400"
+                    : meta?.lastRunStatus === "budget_exceeded"
+                    ? "border-amber-500 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+                }`}
+                aria-haspopup="dialog"
+                aria-expanded={budgetPanelOpen}
+              >
+                {meta?.lastRunStatus === "budget_exceeded" && (
+                  <span aria-hidden="true" className="text-amber-400">⚠</span>
+                )}
+                <span aria-hidden="true">$</span>
+                {budgetCap.toFixed(2)}
+              </button>
+              {budgetPanelOpen && meta && (
+                <BudgetSettingsPanel
+                  workflowId={meta.id}
+                  onClose={() => setBudgetPanelOpen(false)}
+                  anchorRef={budgetBtnRef}
+                />
+              )}
+            </div>
+            {hasNoProviders && (
+              <Link
+                href="/settings/providers"
+                className="text-xs text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-300"
+                title="Open provider settings"
+              >
+                Add API key
+              </Link>
             )}
-          </div>
-          {hasNoProviders && (
-            <Link
-              href="/settings/providers"
-              className="text-xs text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-300"
-              title="Open provider settings"
-            >
-              Add API key
-            </Link>
-          )}
-          {runBadge && (
-            <span
-              className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${runBadge.colorClass}`}
-            >
-              {runBadge.label}
+            {runBadge && (
+              <span className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${runBadge.colorClass}`}>
+                {runBadge.label}
+              </span>
+            )}
+            <span className="text-xs text-neutral-600 select-none">
+              {nodes.length} {nodes.length === 1 ? "node" : "nodes"} · {edges.length} {edges.length === 1 ? "edge" : "edges"}
             </span>
-          )}
-          <span className="ml-1 text-xs text-neutral-600 select-none">
-            {nodes.length} {nodes.length === 1 ? "node" : "nodes"} · {edges.length} {edges.length === 1 ? "edge" : "edges"}
-          </span>
+          </div>
+
+          {/* ── Row 2: editing tools ── */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleTemplatePicker}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                templatePickerOpen
+                  ? "border-purple-500 bg-purple-500/10 text-purple-400"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
+              Templates
+            </button>
+            <button
+              type="button"
+              onClick={toggleDebugger}
+              title="Show live node execution status and run outputs"
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                debuggerOpen
+                  ? "border-blue-500 bg-blue-500/10 text-blue-400"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800"
+              }`}
+            >
+              Debugger
+            </button>
+            <span className="h-4 w-px bg-neutral-700" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={undo}
+              disabled={!canUndo}
+              title={canUndo ? "Undo" : "Nothing to undo"}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                canUndo
+                  ? "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
+              }`}
+            >
+              Undo <span className="opacity-50">⌘Z</span>
+            </button>
+            <button
+              type="button"
+              onClick={redo}
+              disabled={!canRedo}
+              title={canRedo ? "Redo" : "Nothing to redo"}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                canRedo
+                  ? "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
+              }`}
+            >
+              Redo <span className="opacity-50">⌘⇧Z</span>
+            </button>
+            <button
+              type="button"
+              onClick={saveGraph}
+              disabled={!dirty || saving}
+              title={saving ? "Saving…" : !dirty ? "No unsaved changes" : undefined}
+              className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                dirty && !saving
+                  ? "border-blue-500 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20"
+                  : "border-neutral-700 bg-neutral-900 text-neutral-600 cursor-default"
+              }`}
+            >
+              {saving ? "Saving…" : dirty ? (<>Save <span className="opacity-50">⌘S</span></>) : "Saved"}
+            </button>
+            <span className="h-4 w-px bg-neutral-700" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={toggleSaveAsTemplate}
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
+            >
+              Save as Template
+            </button>
+            <button
+              type="button"
+              onClick={() => setSaveRevisionOpen(true)}
+              disabled={!meta}
+              title={!meta ? "No workflow loaded" : "Save a named revision checkpoint"}
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
+            >
+              Save Revision
+            </button>
+            <button
+              type="button"
+              onClick={() => setSaveFragmentOpen(true)}
+              disabled={getNodes().filter((n) => n.selected).length === 0}
+              title={
+                getNodes().filter((n) => n.selected).length === 0
+                  ? "Select nodes on the canvas first"
+                  : "Save selected nodes as a reusable fragment"
+              }
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
+            >
+              Save as Fragment
+            </button>
+            <button
+              type="button"
+              onClick={() => setFragmentBrowserOpen(true)}
+              title="Browse and insert a saved fragment"
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
+            >
+              Insert Fragment
+            </button>
+            <button
+              type="button"
+              onClick={handleExport}
+              disabled={!meta || exporting}
+              title={!meta ? "No workflow loaded" : undefined}
+              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
+            >
+              {exporting ? "Exporting…" : "Export"}
+            </button>
+          </div>
+
+          {/* Health strip — third row, only renders when there are signals */}
+          <WorkflowHealthStrip health={health} />
         </div>
-        {/* Health strip — second row, only renders when there are signals */}
-        <WorkflowHealthStrip health={health} />
-        </div>
+
+        {/* Floating "Send to Video Editor" FAB — appears after a successful run.
+            Positioned inside the canvas div so left-1/2 centers within the canvas,
+            not the full page width. Visible whether the debugger is open or not. */}
+        {postRunArtifacts.length > 0 && (
+          <div
+            className={`absolute left-1/2 z-30 -translate-x-1/2 transition-all duration-300 ${
+              debuggerOpen ? "bottom-[calc(40vh+0.75rem)]" : "bottom-4"
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => { void handleSendFromCanvas(); }}
+                disabled={sendingFromCanvas}
+                className={`inline-flex items-center gap-2.5 rounded-full border px-5 py-2 text-sm font-semibold shadow-2xl transition-all ${
+                  sendingFromCanvas
+                    ? "cursor-default border-neutral-700 bg-neutral-950 text-neutral-500"
+                    : "border-emerald-500/70 bg-neutral-950 text-emerald-300 shadow-emerald-950 hover:border-emerald-400 hover:bg-emerald-950/80"
+                }`}
+              >
+                {sendingFromCanvas ? (
+                  "Opening Editor…"
+                ) : (
+                  <>
+                    <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-emerald-600/30 px-1 text-[11px] font-bold text-emerald-300">
+                      {postRunArtifacts.length}
+                    </span>
+                    Send to Video Editor
+                  </>
+                )}
+              </button>
+              {!sendingFromCanvas && (
+                <button
+                  type="button"
+                  onClick={() => setPostRunArtifacts([])}
+                  className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-700 bg-neutral-950 text-neutral-500 shadow-xl hover:border-neutral-600 hover:text-neutral-300"
+                  aria-label="Dismiss"
+                >
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <path d="M2 2l6 6M8 2l-6 6" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Right: Inspector Panel */}
@@ -1608,7 +1731,7 @@ function WorkflowHealthStrip({ health }: { health: WorkflowHealthSummary }) {
         </span>
       )}
       {!health.autoRunQueued && health.autoRunPending && !health.isLiveRunning && (
-        <span className={`rounded border px-1.5 py-0.5 text-[11px] animate-pulse ${HEALTH_CHIP.pending}`}>
+        <span className={`rounded border px-1.5 py-0.5 text-[11px] font-medium animate-pulse ${HEALTH_CHIP.pending}`}>
           Pending
         </span>
       )}
