@@ -1,9 +1,9 @@
 /**
- * Template Pack types and loader for AI Studio.
+ * Template Pack types and loader for Itera Studio.
  *
  * Template packs are bundles of pre-built workflow templates that can be
  * installed without a hosted marketplace. Supported sources:
- * - builtin: shipped with AI Studio
+ * - builtin: shipped with Itera Studio
  * - user: created by the current user
  * - imported: loaded from a JSON file or URL
  * - premium: gated by license tier (future)
@@ -31,6 +31,10 @@ export const TemplatePackManifestSchema = z.object({
   tags: z.array(z.string()).optional(),
   templates: z.array(z.string()),
   previews: z.record(z.string()).optional(),
+  /** Per-template example prompts injected into the prompt-template node at load time. */
+  defaultPrompts: z.record(z.string()).optional(),
+  /** Ordered list of template IDs to surface in the featured/empty-state panel. */
+  featuredTemplates: z.array(z.string()).optional(),
   requiredProviders: z.array(z.string()).optional(),
   requiredNodeTypes: z.array(z.string()).optional(),
   source: z.enum(["builtin", "user", "imported", "premium"]),
@@ -157,6 +161,30 @@ export class TemplatePackLoader {
     }
 
     return entries;
+  }
+
+  /**
+   * Get featured templates across all registered packs, in pack-registration
+   * order then per-pack declaration order, up to `limit` entries.
+   * Template IDs not present in the pack's templates map are silently skipped.
+   */
+  getFeaturedTemplates(limit = 4): TemplateEntry[] {
+    const result: TemplateEntry[] = [];
+    for (const pack of this.packs.values()) {
+      for (const templateId of pack.manifest.featuredTemplates ?? []) {
+        const graph = pack.templates[templateId];
+        if (!graph) continue;
+        result.push({
+          id: templateId,
+          packId: pack.manifest.id,
+          name: templateId,
+          graph,
+          preview: pack.manifest.previews?.[templateId],
+        });
+        if (result.length >= limit) return result;
+      }
+    }
+    return result;
   }
 
   /**

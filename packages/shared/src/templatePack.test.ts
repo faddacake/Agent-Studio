@@ -167,3 +167,108 @@ describe("checkAvailability", () => {
     assert.equal(availability.missingNodeTypes.length, 0);
   });
 });
+
+describe("getFeaturedTemplates", () => {
+  it("returns featured templates in declaration order across packs", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack({
+      manifest: {
+        id: "pack-a",
+        name: "Pack A",
+        version: "1.0.0",
+        source: "builtin",
+        templates: ["alpha", "beta", "gamma"],
+        featuredTemplates: ["beta", "alpha"],
+      },
+      templates: {
+        alpha: { version: 1, nodes: [], edges: [] },
+        beta: { version: 1, nodes: [], edges: [] },
+        gamma: { version: 1, nodes: [], edges: [] },
+      },
+    });
+    loader.register(pack);
+
+    const featured = loader.getFeaturedTemplates(10);
+    assert.equal(featured.length, 2);
+    assert.equal(featured[0].id, "beta");
+    assert.equal(featured[1].id, "alpha");
+  });
+
+  it("respects the limit parameter", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack({
+      manifest: {
+        id: "pack-b",
+        name: "Pack B",
+        version: "1.0.0",
+        source: "builtin",
+        templates: ["a", "b", "c"],
+        featuredTemplates: ["a", "b", "c"],
+      },
+      templates: {
+        a: { version: 1, nodes: [], edges: [] },
+        b: { version: 1, nodes: [], edges: [] },
+        c: { version: 1, nodes: [], edges: [] },
+      },
+    });
+    loader.register(pack);
+
+    const limited = loader.getFeaturedTemplates(2);
+    assert.equal(limited.length, 2);
+    assert.equal(limited[0].id, "a");
+    assert.equal(limited[1].id, "b");
+  });
+
+  it("returns empty array when no packs declare featuredTemplates", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack(loadRawPack()); // social-content-pipeline has no featuredTemplates
+    loader.register(pack);
+
+    const featured = loader.getFeaturedTemplates(10);
+    assert.equal(featured.length, 0);
+  });
+
+  it("silently skips featuredTemplates IDs absent from the templates map", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack({
+      manifest: {
+        id: "pack-c",
+        name: "Pack C",
+        version: "1.0.0",
+        source: "builtin",
+        templates: ["real"],
+        featuredTemplates: ["real", "ghost"],
+      },
+      templates: {
+        real: { version: 1, nodes: [], edges: [] },
+      },
+    });
+    loader.register(pack);
+
+    const featured = loader.getFeaturedTemplates(10);
+    assert.equal(featured.length, 1);
+    assert.equal(featured[0].id, "real");
+  });
+
+  it("populates preview from manifest.previews", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack({
+      manifest: {
+        id: "pack-d",
+        name: "Pack D",
+        version: "1.0.0",
+        source: "builtin",
+        templates: ["x"],
+        previews: { x: "A great template" },
+        featuredTemplates: ["x"],
+      },
+      templates: {
+        x: { version: 1, nodes: [], edges: [] },
+      },
+    });
+    loader.register(pack);
+
+    const featured = loader.getFeaturedTemplates(10);
+    assert.equal(featured[0].preview, "A great template");
+  });
+});
