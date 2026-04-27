@@ -3,7 +3,7 @@
     "id": "video-creation-starters",
     "name": "Video Creation Starters",
     "version": "1.0.0",
-    "author": "AI Studio",
+    "author": "Itera Studio",
     "description": "Three ready-to-run starting points for the core multimodal loop: generate images, animate them, and export.",
     "category": "video-creation",
     "tags": ["video", "image", "starter", "social", "reel", "story"],
@@ -13,6 +13,12 @@
       "product-promo": "4 nodes: Prompt → Best-of-N (4 variants) → Social Format → Export Bundle. Multi-variant product images formatted for every platform.",
       "story-highlight": "5 nodes: Shared Prompt feeds two parallel Scene A / Scene B tracks, each Image Gen → Video Gen. Great for two-shot narratives."
     },
+    "defaultPrompts": {
+      "quick-social-reel": "A cinematic aerial shot of tropical turquoise ocean waves crashing on a sandy beach at golden hour, vivid colors, social media ready, vertical 9:16",
+      "product-promo": "A sleek silver smartwatch with a sapphire display on a clean white background, studio lighting, sharp focus, commercial product photography",
+      "story-highlight": "A misty mountain valley at dawn, fog rolling through ancient pine trees, cinematic wide establishing shot, moody and atmospheric"
+    },
+    "featuredTemplates": ["quick-social-reel", "product-promo"],
     "requiredNodeTypes": ["image-generation", "video-generation", "best-of-n", "social-format", "export-bundle"],
     "source": "builtin"
   },
