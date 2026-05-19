@@ -22,6 +22,7 @@ export enum NodeRuntimeKind {
 
 export enum NodeCategory {
   Agent = "agent",
+  Memory = "memory",
   Generation = "generation",
   Input = "input",
   Output = "output",

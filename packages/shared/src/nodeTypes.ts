@@ -2,6 +2,9 @@ export enum NodeType {
   // Agent
   ReactAgent = "react-agent",
 
+  // Memory
+  ObsidianMemory = "obsidian-memory",
+
   // Generation
   ImageGeneration = "image-generation",
   VideoGeneration = "video-generation",
