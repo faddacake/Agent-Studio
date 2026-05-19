@@ -4,12 +4,14 @@ import { executeClipScoring } from "./clipScoring.js";
 import { executeRanking } from "./ranking.js";
 import { executeSocialFormat } from "./socialFormat.js";
 import { executeExportBundle } from "./exportBundle.js";
+import { executeReactAgent } from "./reactAgent.js";
 
 export { executeBestOfN } from "./bestOfN.js";
 export { executeClipScoring } from "./clipScoring.js";
 export { executeRanking } from "./ranking.js";
 export { executeSocialFormat } from "./socialFormat.js";
 export { executeExportBundle } from "./exportBundle.js";
+export { executeReactAgent } from "./reactAgent.js";
 
 export {
   MockGeneratorAdapter,
@@ -37,7 +39,8 @@ export type {
  * string, matching the NodeDefinition.type in the registry.
  */
 export function registerCapabilityExecutors(): void {
-  nodeExecutor.registerCapability("best-of-n",    executeBestOfN);
+  nodeExecutor.registerCapability("react-agent",   executeReactAgent);
+  nodeExecutor.registerCapability("best-of-n",     executeBestOfN);
   nodeExecutor.registerCapability("clip-scoring",  executeClipScoring);
   nodeExecutor.registerCapability("ranking",       executeRanking);
   nodeExecutor.registerCapability("social-format", executeSocialFormat);

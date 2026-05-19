@@ -27,15 +27,16 @@ const CATEGORY_META: Record<
   NodeCategory,
   { label: string; order: number }
 > = {
-  [NodeCategory.Generation]: { label: "Generation", order: 0 },
-  [NodeCategory.Input]: { label: "Input / Output", order: 1 },
-  [NodeCategory.Output]: { label: "Input / Output", order: 1 },
-  [NodeCategory.Transform]: { label: "Transform", order: 2 },
-  [NodeCategory.Utility]: { label: "Utility", order: 3 },
-  [NodeCategory.Scoring]: { label: "Scoring", order: 4 },
-  [NodeCategory.Formatting]: { label: "Formatting", order: 5 },
-  [NodeCategory.Export]: { label: "Export", order: 6 },
-  [NodeCategory.Annotation]: { label: "Annotation", order: 7 },
+  [NodeCategory.Agent]:      { label: "Agent",        order: -1 },
+  [NodeCategory.Generation]: { label: "Generation",   order: 0 },
+  [NodeCategory.Input]:      { label: "Input / Output", order: 1 },
+  [NodeCategory.Output]:     { label: "Input / Output", order: 1 },
+  [NodeCategory.Transform]:  { label: "Transform",    order: 2 },
+  [NodeCategory.Utility]:    { label: "Utility",      order: 3 },
+  [NodeCategory.Scoring]:    { label: "Scoring",      order: 4 },
+  [NodeCategory.Formatting]: { label: "Formatting",   order: 5 },
+  [NodeCategory.Export]:     { label: "Export",       order: 6 },
+  [NodeCategory.Annotation]: { label: "Annotation",   order: 7 },
 };
 
 /** Merged group key — Input and Output share a group. */

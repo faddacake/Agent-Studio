@@ -36,6 +36,7 @@ import { SaveRevisionDialog } from "./SaveRevisionDialog";
 import { SaveFragmentDialog } from "./SaveFragmentDialog";
 import { FragmentBrowser } from "@/components/fragments/FragmentBrowser";
 import { CustomNode } from "./CustomNode";
+import { AgentNode } from "./AgentNode";
 import { ConfirmReplaceDialog } from "./ConfirmReplaceDialog";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { InspectorPanel } from "@/components/inspector";
@@ -53,7 +54,10 @@ import { SchedulePanel } from "./SchedulePanel";
 
 // ── Node types map (stable reference) ──
 
-const nodeTypes: NodeTypes = { custom: CustomNode };
+const nodeTypes: NodeTypes = {
+  custom:       CustomNode,
+  "react-agent": AgentNode,
+};
 
 // ── Run-status dot colors (mirrors list-page RUN_DOT_COLOR) ──
 

@@ -484,7 +484,121 @@ export const bestOfNNode: NodeDefinition = {
   isAvailable: true,
 };
 
+/**
+ * ReAct Agent node — autonomous reasoning + acting loop.
+ *
+ * Implements the ReAct (Reasoning + Acting) pattern: the LLM iterates through
+ * Thought → Action → Observation cycles until it produces a Final Answer.
+ * Tools are canvas nodes invoked by the agent during execution.
+ *
+ * Supports Anthropic (Claude), OpenAI (GPT), Grok (xAI), and Ollama (local).
+ * The API key is entered directly in the node params (BYO key — never stored
+ * platform-side beyond the node's own param field).
+ *
+ * Live reasoning steps are streamed to the Run Debugger via the `agent:step`
+ * RunEvent so you can watch the agent think in real time.
+ */
+export const reactAgentNode: NodeDefinition = {
+  type: "react-agent",
+  label: "ReAct Agent",
+  category: NodeCategory.Agent,
+  description: "Autonomous LLM agent that reasons and acts through Thought/Action/Observation cycles to complete a goal.",
+  icon: "bot",
+
+  inputs: [
+    {
+      id: "goal_in",
+      label: "Goal",
+      type: PortType.Text,
+      required: false,
+      description: "Task or goal for the agent (overrides the Goal param when connected)",
+    },
+  ],
+  outputs: [
+    {
+      id: "answer_out",
+      label: "Answer",
+      type: PortType.Text,
+      description: "The agent's final answer after completing all reasoning steps",
+    },
+    {
+      id: "steps_out",
+      label: "Steps",
+      type: PortType.Json,
+      description: "Array of AgentStep objects (Thought / Action / Observation trace)",
+    },
+  ],
+
+  parameterSchema: [
+    {
+      key: "goal",
+      label: "Goal",
+      type: "string",
+      multiline: true,
+      placeholder: "Describe what you want the agent to accomplish...",
+      description: "The task for the agent. Wire the goal_in port to override this at runtime.",
+    },
+    {
+      key: "provider",
+      label: "LLM Provider",
+      type: "enum",
+      defaultValue: "anthropic",
+      options: [
+        { value: "anthropic", label: "Anthropic (Claude)" },
+        { value: "openai",    label: "OpenAI (GPT)" },
+        { value: "grok",      label: "Grok (xAI)" },
+        { value: "ollama",    label: "Ollama (Local)" },
+      ],
+      description: "Which LLM provider to use for the reasoning loop",
+    },
+    {
+      key: "model",
+      label: "Model",
+      type: "string",
+      placeholder: "e.g. claude-3-5-haiku-20241022",
+      description: "Model name. Leave blank to use the provider default (haiku / gpt-4o-mini / grok-3-mini / llama3.2).",
+    },
+    {
+      key: "apiKey",
+      label: "API Key",
+      type: "string",
+      placeholder: "sk-ant-... or sk-... or xai-...",
+      description: "Your LLM provider API key. Not required for Ollama (local). Never logged or stored by the platform.",
+    },
+    {
+      key: "maxSteps",
+      label: "Max Steps",
+      type: "number",
+      min: 1,
+      max: 20,
+      step: 1,
+      defaultValue: 10,
+      description: "Maximum number of Thought/Action/Observation cycles before forcing a final answer",
+    },
+    {
+      key: "tools",
+      label: "Tools",
+      type: "json",
+      defaultValue: [],
+      description: "Array of node type strings the agent can use as tools, e.g. [\"prompt-template\"]. Empty = no tools (reasoning only).",
+    },
+  ],
+
+  uiSchema: {
+    groups: [
+      { label: "Goal",     fields: ["goal"] },
+      { label: "LLM",      fields: ["provider", "model", "apiKey"] },
+      { label: "Behavior", fields: ["maxSteps", "tools"] },
+    ],
+  },
+
+  runtimeKind: NodeRuntimeKind.Capability,
+  tags: ["agent", "react", "llm", "autonomous", "reasoning"],
+  isAvailable: true,
+};
+
 export const capabilityNodes: NodeDefinition[] = [
+  reactAgentNode,
   bestOfNNode,
   clipScoringNode,
   socialFormatNode,

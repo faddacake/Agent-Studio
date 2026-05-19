@@ -1,4 +1,7 @@
 export enum NodeType {
+  // Agent
+  ReactAgent = "react-agent",
+
   // Generation
   ImageGeneration = "image-generation",
   VideoGeneration = "video-generation",

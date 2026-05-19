@@ -38,9 +38,14 @@ export type {
   BlockedReason,
 } from "./debugSnapshot.js";
 
+// ── LLM Text Adapters ──
+export { createLLMClient, AnthropicClient, OpenAIClient, OllamaClient, createGrokClient } from "./llm/index.js";
+export type { LLMMessage, LLMChatOptions, LLMTextClient } from "./llm/index.js";
+
 // ── Capability Executors ──
 export {
   registerCapabilityExecutors,
+  executeReactAgent,
   executeBestOfN,
   executeClipScoring,
   executeRanking,

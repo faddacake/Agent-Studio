@@ -25,10 +25,14 @@ import {
 
 // ── React Flow ↔ WorkflowNode adapters ──
 
+// Node types that use a specialized React Flow component instead of CustomNode.
+// All other nodes fall back to the generic "custom" component.
+const SPECIALIZED_NODE_TYPES = new Set(["react-agent"]);
+
 export function toFlowNode(wn: WorkflowNode): Node {
   return {
     id: wn.id,
-    type: "custom",
+    type: SPECIALIZED_NODE_TYPES.has(wn.type) ? wn.type : "custom",
     position: wn.position,
     data: {
       ...wn.data,

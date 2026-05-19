@@ -1,4 +1,5 @@
 import { nodeRegistry } from "@aistudio/shared";
+import type { AgentStep } from "@aistudio/shared";
 import type { RunState, NodeState } from "./runCoordinator.js";
 import type { ExecutionGraph, ExecutionNode, NodeExecutionStatus } from "./executionGraph.js";
 
@@ -55,6 +56,8 @@ export interface NodeDebugInfo {
   providerId?: string;
   /** Model ID if this is a provider node */
   modelId?: string;
+  /** Live Thought/Action/Observation steps (ReAct Agent nodes only) */
+  agentSteps?: AgentStep[];
 }
 
 // ── Run-level debug snapshot ──
@@ -153,6 +156,7 @@ export function buildDebugSnapshot(run: RunState): RunDebugSnapshot {
       inputKeys,
       providerId: execNode.data.providerId,
       modelId: execNode.data.modelId,
+      agentSteps: state?.agentSteps,
     };
   });
 

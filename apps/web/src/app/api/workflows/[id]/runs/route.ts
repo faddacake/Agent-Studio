@@ -190,6 +190,11 @@ function makeDispatch(runId: string, outputDir: string): DispatchJob {
         providerId: job.providerId,
         modelId: job.modelId,
         outputDir,
+        // Wire agent step callback: stores each T/A/O step on NodeState and
+        // emits an agent:step event so the SSE stream updates in real time.
+        onAgentStep: (step) => {
+          coordinator.onAgentStep(job.runId, job.nodeId, step);
+        },
       };
 
       const result = await nodeExecutor.execute(context);

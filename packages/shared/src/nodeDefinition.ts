@@ -21,6 +21,7 @@ export enum NodeRuntimeKind {
 // ── Node Categories ──
 
 export enum NodeCategory {
+  Agent = "agent",
   Generation = "generation",
   Input = "input",
   Output = "output",
@@ -124,6 +125,33 @@ export interface CostEstimate {
   breakdown?: string;
 }
 
+// ── Agent Step (ReAct pattern) ──
+
+/**
+ * A single Thought → Action → Observation step emitted by a ReAct Agent node.
+ * Stored on NodeState.agentSteps and streamed via the SSE snapshot so the
+ * Run Debugger can display live reasoning traces.
+ */
+export interface AgentStep {
+  /** Step index (0-based) */
+  index: number;
+  /** LLM reasoning text */
+  thought: string;
+  /** Tool the agent chose to call (absent on final-answer steps) */
+  action?: {
+    tool: string;
+    params: Record<string, unknown>;
+  };
+  /** Result returned by the tool invocation */
+  observation?: string;
+  /** True if this is the "Final Answer" step — no further actions follow */
+  isFinal: boolean;
+  /** Final answer text, set only when isFinal is true */
+  answer?: string;
+  /** Unix timestamp (ms) when this step was emitted */
+  timestamp: number;
+}
+
 // ── Execution Context & Result ──
 
 export interface NodeExecutionContext {
@@ -143,6 +171,12 @@ export interface NodeExecutionContext {
   outputDir: string;
   /** Abort signal for cancellation */
   signal?: AbortSignal;
+  /**
+   * Streaming callback for ReAct Agent nodes.
+   * Called once per Thought/Action/Observation cycle so the Run Debugger
+   * can display a live reasoning trace. Optional — ignored by all other nodes.
+   */
+  onAgentStep?: (step: AgentStep) => void;
 }
 
 export interface NodeExecutionResult {

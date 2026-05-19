@@ -29,6 +29,7 @@ export type {
   NodeParameterSchema,
   UISchema,
   CostEstimate,
+  AgentStep,
   NodeExecutionContext,
   NodeExecutionResult,
   SerializableNodeDefinition,
@@ -56,6 +57,7 @@ export {
   videoGenerationNode,
   createProviderNodeDefinition,
   // Capability nodes
+  reactAgentNode,
   bestOfNNode,
   clipScoringNode,
   socialFormatNode,

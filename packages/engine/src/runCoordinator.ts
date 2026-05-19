@@ -1,4 +1,4 @@
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph, AgentStep } from "@aistudio/shared";
 import {
   buildExecutionGraph,
   getReadyNodes,
@@ -37,6 +37,8 @@ export interface NodeState {
   startedAt?: number;
   /** Timestamp when completed/failed */
   completedAt?: number;
+  /** Live Thought/Action/Observation trace (ReAct Agent nodes only) */
+  agentSteps?: AgentStep[];
 }
 
 export interface RunState {
@@ -76,7 +78,9 @@ export type RunEvent =
   | { type: "run:failed"; runId: string; error: string }
   | { type: "run:partial_failure"; runId: string }
   | { type: "run:cancelled"; runId: string }
-  | { type: "run:budget_exceeded"; runId: string; totalCost: number; budgetCap: number };
+  | { type: "run:budget_exceeded"; runId: string; totalCost: number; budgetCap: number }
+  /** Emitted each time a ReAct Agent node completes one Thought/Action/Observation step */
+  | { type: "agent:step"; runId: string; nodeId: string; step: AgentStep };
 
 export type EventListener = (event: RunEvent) => void;
 
@@ -275,6 +279,21 @@ export class RunCoordinator {
 
     // Other branches may still have ready nodes
     await this.dispatchReadyNodes(run, dispatch);
+  }
+
+  /**
+   * Record an agent reasoning step for a running ReAct Agent node.
+   *
+   * Called by the capability executor on each Thought/Action/Observation cycle.
+   * Appends the step to NodeState.agentSteps and emits an `agent:step` event,
+   * which triggers an SSE snapshot rebuild so the Run Debugger updates in real time.
+   */
+  onAgentStep(runId: string, nodeId: string, step: AgentStep): void {
+    const run = this.getRun(runId);
+    const nodeState = this.getNodeState(run, nodeId);
+    if (!nodeState.agentSteps) nodeState.agentSteps = [];
+    nodeState.agentSteps.push(step);
+    this.emit({ type: "agent:step", runId, nodeId, step });
   }
 
   /**
