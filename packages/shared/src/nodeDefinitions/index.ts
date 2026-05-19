@@ -21,6 +21,7 @@ export {
 } from "./provider.js";
 export {
   reactAgentNode,
+  obsidianMemoryNode,
   bestOfNNode,
   clipScoringNode,
   socialFormatNode,

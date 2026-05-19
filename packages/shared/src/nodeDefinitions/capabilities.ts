@@ -598,8 +598,189 @@ export const reactAgentNode: NodeDefinition = {
   isAvailable: true,
 };
 
+/**
+ * Obsidian Memory node — file-based persistent knowledge store.
+ *
+ * Reads and writes Markdown notes (with YAML frontmatter) to a configurable
+ * vault directory. A JSON sidecar index (_memory_index.json) enables fast
+ * keyword + tag search. Fully compatible with Obsidian and any Markdown editor.
+ *
+ * Registers as five capabilities:
+ *   obsidian-memory  (standalone canvas node)
+ *   memory-write     }
+ *   memory-append    } Tool aliases for the ReAct Agent
+ *   memory-search    }
+ *   memory-read      }
+ */
+export const obsidianMemoryNode: NodeDefinition = {
+  type: "obsidian-memory",
+  label: "Obsidian Memory",
+  category: NodeCategory.Memory,
+  description: "Read and write persistent Markdown notes in an Obsidian-compatible vault. Use as a tool with the ReAct Agent for long-term memory.",
+  icon: "brain",
+
+  inputs: [
+    {
+      id: "query_in",
+      label: "Query / Title",
+      type: PortType.Text,
+      required: false,
+      description: "Search query (memory-search) or note title (memory-read / memory-append). Takes priority over the query param.",
+    },
+    {
+      id: "content_in",
+      label: "Content",
+      type: PortType.Text,
+      required: false,
+      description: "Note body to write or append (memory-write / memory-append).",
+    },
+  ],
+  outputs: [
+    {
+      id: "content_out",
+      label: "Result",
+      type: PortType.Text,
+      description: "Human-readable operation result — confirmation, search summary, or note body.",
+    },
+    {
+      id: "result_out",
+      label: "Structured Result",
+      type: PortType.Json,
+      description: "Structured JSON: { noteId, path, wordCount, tokens } for write/append; search result array; note metadata for read.",
+    },
+  ],
+
+  parameterSchema: [
+    // ── Vault ──
+    {
+      key: "vaultPath",
+      label: "Vault Path",
+      type: "string",
+      placeholder: "Default: ./memory — bind-mounted to host",
+      description: "Absolute path inside the container. Leave blank to use /app/memory (the default bind-mount). Set MEMORY_VAULT_PATH env var to override globally.",
+    },
+    // ── Operation ──
+    {
+      key: "operation",
+      label: "Operation",
+      type: "enum",
+      defaultValue: "search",
+      options: [
+        { value: "write",  label: "Write Note" },
+        { value: "append", label: "Append to Note" },
+        { value: "search", label: "Search Notes" },
+        { value: "read",   label: "Read Note" },
+      ],
+      description: "Which memory operation to perform. When used as a ReAct tool alias, this is set automatically.",
+    },
+    // ── Note ──
+    {
+      key: "title",
+      label: "Note Title",
+      type: "string",
+      placeholder: "e.g. Research findings on LLM agents",
+      description: "Title for write/append/read. Becomes the filename slug. Required for memory-write.",
+    },
+    {
+      key: "folder",
+      label: "Folder",
+      type: "string",
+      defaultValue: "notes",
+      description: "Subfolder inside the vault (default: notes). Use / for subfolders e.g. daily/2026.",
+    },
+    {
+      key: "tags",
+      label: "Tags",
+      type: "json",
+      defaultValue: [],
+      description: "Array of tag strings for the note, e.g. [\"research\", \"agents\"]. Used for filtering in searches.",
+    },
+    {
+      key: "overwrite",
+      label: "Overwrite Existing",
+      type: "boolean",
+      defaultValue: false,
+      description: "If true, replace an existing note with the same title. Default false — returns an error message instead.",
+    },
+    // ── Search ──
+    {
+      key: "query",
+      label: "Search Query",
+      type: "string",
+      placeholder: "Search keywords or phrase",
+      description: "Keywords to search for. Used when query_in port is not connected.",
+    },
+    {
+      key: "limit",
+      label: "Max Results",
+      type: "number",
+      min: 1,
+      max: 20,
+      step: 1,
+      defaultValue: 5,
+      description: "Maximum number of search results to return (default 5).",
+    },
+    {
+      key: "semantic",
+      label: "Semantic Search",
+      type: "boolean",
+      defaultValue: false,
+      description: "Reserved for Phase 3 embedding-based search. Has no effect in Phase 2 (keyword search is always used).",
+    },
+    // ── Append ──
+    {
+      key: "heading",
+      label: "Section Heading",
+      type: "string",
+      placeholder: "## New Research",
+      description: "Optional Markdown heading to insert before the appended content block.",
+    },
+    // ── Source ──
+    {
+      key: "sourceUrl",
+      label: "Source URL",
+      type: "string",
+      placeholder: "https://...",
+      description: "Optional origin URL stored in frontmatter (useful for web-sourced notes).",
+    },
+    // ── Identify by ID ──
+    {
+      key: "noteId",
+      label: "Note ID",
+      type: "string",
+      placeholder: "n_1716134400000",
+      description: "Exact note ID for memory-append and memory-read when the title is ambiguous.",
+    },
+    // ── Identify by path ──
+    {
+      key: "path",
+      label: "Note Path",
+      type: "string",
+      placeholder: "notes/my-note.md",
+      description: "Relative path from the vault root. Most reliable identifier for memory-read.",
+    },
+  ],
+
+  uiSchema: {
+    groups: [
+      { label: "Vault",     fields: ["vaultPath"] },
+      { label: "Operation", fields: ["operation"] },
+      { label: "Note",      fields: ["title", "folder", "tags", "overwrite"] },
+      { label: "Search",    fields: ["query", "limit", "semantic"] },
+      { label: "Append",    fields: ["heading"] },
+      { label: "Identify",  fields: ["noteId", "path"] },
+      { label: "Source",    fields: ["sourceUrl"] },
+    ],
+  },
+
+  runtimeKind: NodeRuntimeKind.Capability,
+  tags: ["memory", "obsidian", "notes", "agent", "persistent", "markdown"],
+  isAvailable: true,
+};
+
 export const capabilityNodes: NodeDefinition[] = [
   reactAgentNode,
+  obsidianMemoryNode,
   bestOfNNode,
   clipScoringNode,
   socialFormatNode,
