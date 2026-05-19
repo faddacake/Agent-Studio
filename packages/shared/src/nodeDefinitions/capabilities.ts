@@ -535,6 +535,7 @@ export const reactAgentNode: NodeDefinition = {
       label: "Goal",
       type: "string",
       multiline: true,
+      defaultValue: "Research and summarize the key benefits of using a ReAct agent for multi-step reasoning tasks.",
       placeholder: "Describe what you want the agent to accomplish...",
       description: "The task for the agent. Wire the goal_in port to override this at runtime.",
     },
@@ -572,7 +573,7 @@ export const reactAgentNode: NodeDefinition = {
       min: 1,
       max: 20,
       step: 1,
-      defaultValue: 10,
+      defaultValue: 8,
       description: "Maximum number of Thought/Action/Observation cycles before forcing a final answer",
     },
     {
