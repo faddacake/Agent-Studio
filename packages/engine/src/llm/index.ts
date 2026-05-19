@@ -9,9 +9,14 @@
  *   openai    → gpt-4o-mini
  *   grok      → grok-3-mini
  *   ollama    → llama3.2  (local, no key required)
+ *
+ * Error handling:
+ *   All adapters throw LLMError (not plain Error) with a structured `kind`
+ *   field so callers can decide whether to retry, truncate, or surface to user.
  */
 
-export type { LLMMessage, LLMChatOptions, LLMTextClient } from "./llmClient.js";
+export type { LLMMessage, LLMChatOptions, LLMTextClient, LLMErrorKind } from "./llmClient.js";
+export { LLMError, isUserFacingLLMError } from "./llmClient.js";
 export { AnthropicClient } from "./anthropicClient.js";
 export { OpenAIClient } from "./openaiClient.js";
 export { createGrokClient } from "./grokClient.js";
@@ -33,10 +38,10 @@ const PROVIDER_DEFAULTS: Record<string, string> = {
 /**
  * Create an LLMTextClient for the given provider.
  *
- * @param provider  One of: "anthropic" | "openai" | "grok" | "ollama"
- * @param model     Model name override. Falls back to the provider default when empty.
- * @param apiKey    API key (not required for Ollama).
- * @param ollamaBaseUrl  Override Ollama base URL (default: http://localhost:11434)
+ * @param provider       One of: "anthropic" | "openai" | "grok" | "ollama"
+ * @param model          Model name override. Falls back to provider default when empty/undefined.
+ * @param apiKey         API key (not required for Ollama).
+ * @param ollamaBaseUrl  Override Ollama base URL (default: http://localhost:11434).
  */
 export function createLLMClient(
   provider: string,
@@ -44,7 +49,7 @@ export function createLLMClient(
   apiKey: string | undefined,
   ollamaBaseUrl?: string,
 ): LLMTextClient {
-  const resolvedModel = (model && model.trim()) || PROVIDER_DEFAULTS[provider] || "";
+  const resolvedModel = (model?.trim()) || PROVIDER_DEFAULTS[provider] || "";
 
   switch (provider) {
     case "anthropic":

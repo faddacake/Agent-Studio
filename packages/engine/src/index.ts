@@ -39,8 +39,8 @@ export type {
 } from "./debugSnapshot.js";
 
 // ── LLM Text Adapters ──
-export { createLLMClient, AnthropicClient, OpenAIClient, OllamaClient, createGrokClient } from "./llm/index.js";
-export type { LLMMessage, LLMChatOptions, LLMTextClient } from "./llm/index.js";
+export { createLLMClient, AnthropicClient, OpenAIClient, OllamaClient, createGrokClient, LLMError, isUserFacingLLMError } from "./llm/index.js";
+export type { LLMMessage, LLMChatOptions, LLMTextClient, LLMErrorKind } from "./llm/index.js";
 
 // ── Capability Executors ──
 export {

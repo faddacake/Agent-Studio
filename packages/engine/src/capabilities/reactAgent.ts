@@ -22,7 +22,7 @@ import type {
 } from "@aistudio/shared";
 import { nodeRegistry } from "@aistudio/shared";
 import { nodeExecutor } from "../executor.js";
-import { createLLMClient } from "../llm/index.js";
+import { createLLMClient, LLMError, isUserFacingLLMError } from "../llm/index.js";
 import type { LLMMessage } from "../llm/index.js";
 
 // ── Tool description ───────────────────────────────────────────────────────────
@@ -272,14 +272,28 @@ export async function executeReactAgent(
   for (let i = 0; i < maxSteps; i++) {
     if (context.signal?.aborted) break;
 
-    // Call the LLM
+    // Call the LLM — translate LLMError kinds into clear failures or recovery
     let response: string;
     try {
       response = await llm.chat(messages, {
-        maxTokens: 1024,
-        signal: context.signal,
+        maxTokens:   1024,
+        temperature: 0.2,   // low temperature = more consistent ReAct formatting
+        stop:        ["Observation:"], // let the loop inject observations itself
+        signal:      context.signal,
       });
     } catch (err) {
+      if (err instanceof LLMError) {
+        // auth / context_length: surface clearly — no point retrying
+        if (isUserFacingLLMError(err)) throw err;
+        // rate_limit: surface with instruction
+        if (err.kind === "rate_limit") {
+          throw new Error(`${err.message} (failed at step ${i} of ${maxSteps})`);
+        }
+        // server / network: include step context for debugging
+        throw new Error(
+          `LLM ${err.kind} error on step ${i}: ${err.message}`,
+        );
+      }
       throw new Error(
         `LLM call failed on step ${i}: ${err instanceof Error ? err.message : String(err)}`,
       );
