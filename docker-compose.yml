@@ -16,6 +16,7 @@ services:
       - COREPACK_HOME=/tmp/corepack
     volumes:
       - .:/app
+      - ./memory:/app/memory
       - /app/node_modules
       - app_data:/data
     healthcheck:
@@ -43,6 +44,7 @@ services:
       - COREPACK_HOME=/tmp/corepack
     volumes:
       - .:/app
+      - ./memory:/app/memory
       - /app/node_modules
       - app_data:/data
     depends_on:
