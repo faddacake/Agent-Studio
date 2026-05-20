@@ -412,6 +412,10 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   // ── Fragment save / insert ────────────────────────────────────────────────
   const [saveFragmentOpen, setSaveFragmentOpen] = useState(false);
   const [fragmentBrowserOpen, setFragmentBrowserOpen] = useState(false);
+  // ⋯ More: secondary-action overflow menu (Row 2)
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const moreMenuBtnRef = useRef<HTMLButtonElement | null>(null);
+  const moreMenuRef = useRef<HTMLDivElement | null>(null);
   const { getNodes } = useReactFlow();
 
   const getSelectedFragment = useCallback((): import("@aistudio/shared").WorkflowGraph => {
@@ -532,7 +536,41 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   // Cleanup timer on unmount
   useEffect(() => () => {
     if (badgeTimerRef.current) clearTimeout(badgeTimerRef.current);
+    if (addNodeOffsetTimerRef.current) clearTimeout(addNodeOffsetTimerRef.current);
   }, []);
+
+  // Fit view when a workflow with nodes loads into the canvas.
+  // loadWorkflow() sets meta + nodes atomically, so nodes are already populated
+  // when this effect fires on meta.id change.
+  // Template loads are handled separately (templateLoadSeq).
+  const lastFitWorkflowId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!meta?.id) return;
+    if (meta.id === lastFitWorkflowId.current) return;
+    lastFitWorkflowId.current = meta.id;
+    if (nodes.length === 0) return; // empty workflow — nothing to fit
+    const t1 = setTimeout(() => { fitView({ duration: 200, padding: 0.22 }); }, 80);
+    const t2 = setTimeout(() => { fitView({ duration: 250, padding: 0.22 }); }, 420);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta?.id]);
+
+  // Close the ⋯ More menu on click outside its button/panel
+  useEffect(() => {
+    if (!moreMenuOpen) return;
+    function onMouseDown(e: MouseEvent) {
+      // Cast through unknown: @xyflow/react's `Node` type shadows the DOM Node;
+      // HTMLElement extends DOM Node so the cast is safe for `contains()`.
+      const target = e.target as unknown as HTMLElement;
+      if (
+        moreMenuBtnRef.current?.contains(target) ||
+        moreMenuRef.current?.contains(target)
+      ) return;
+      setMoreMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [moreMenuOpen]);
 
   // ── Latest Outputs — populate Inspector config-tab preview ───────────────
 
@@ -911,12 +949,27 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
     return fromFlowNode(flowNode);
   }, [selectedNodeId, nodes]);
 
-  // Add node from palette at center of viewport
+  // Cascade-offset counter: each consecutive palette add is staggered +40 px
+  // down-right so nodes don't pile up at the same spot. Resets after 2 s idle.
+  const addNodeOffsetRef = useRef(0);
+  const addNodeOffsetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Add node from palette — placed near viewport center with a small cascade offset.
   const handleAddNode = useCallback(
     (node: WorkflowNode) => {
+      const STEP = 40;
+      const idx = addNodeOffsetRef.current;
+      addNodeOffsetRef.current += 1;
+
+      // Reset cascade counter after 2 s of palette inactivity
+      if (addNodeOffsetTimerRef.current) clearTimeout(addNodeOffsetTimerRef.current);
+      addNodeOffsetTimerRef.current = setTimeout(() => {
+        addNodeOffsetRef.current = 0;
+      }, 2000);
+
       const position = screenToFlowPosition({
-        x: window.innerWidth / 2,
-        y: window.innerHeight / 2,
+        x: window.innerWidth / 2 + idx * STEP,
+        y: window.innerHeight / 2 + idx * STEP,
       });
       addNode({ ...node, position });
     },
@@ -1501,53 +1554,85 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
             >
               {saving ? "Saving…" : dirty ? (<>Save <span className="opacity-50">⌘S</span></>) : "Saved"}
             </button>
-            <span className="h-4 w-px bg-neutral-700" aria-hidden="true" />
-            <button
-              type="button"
-              onClick={toggleSaveAsTemplate}
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
-            >
-              Save as Template
-            </button>
-            <button
-              type="button"
-              onClick={() => setSaveRevisionOpen(true)}
-              disabled={!meta}
-              title={!meta ? "No workflow loaded" : "Save a named revision checkpoint"}
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
-            >
-              Save Revision
-            </button>
-            <button
-              type="button"
-              onClick={() => setSaveFragmentOpen(true)}
-              disabled={getNodes().filter((n) => n.selected).length === 0}
-              title={
-                getNodes().filter((n) => n.selected).length === 0
-                  ? "Select nodes on the canvas first"
-                  : "Save selected nodes as a reusable fragment"
-              }
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
-            >
-              Save as Fragment
-            </button>
-            <button
-              type="button"
-              onClick={() => setFragmentBrowserOpen(true)}
-              title="Browse and insert a saved fragment"
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300"
-            >
-              Insert Fragment
-            </button>
-            <button
-              type="button"
-              onClick={handleExport}
-              disabled={!meta || exporting}
-              title={!meta ? "No workflow loaded" : undefined}
-              className="rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:text-neutral-600"
-            >
-              {exporting ? "Exporting…" : "Export"}
-            </button>
+
+            {/* ── ⋯ More: secondary editing actions in a compact dropdown ── */}
+            <div className="relative">
+              <button
+                ref={moreMenuBtnRef}
+                type="button"
+                onClick={() => setMoreMenuOpen((v) => !v)}
+                title="More editing options"
+                aria-haspopup="menu"
+                aria-expanded={moreMenuOpen}
+                className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  moreMenuOpen
+                    ? "border-neutral-500 bg-neutral-800 text-neutral-200"
+                    : "border-neutral-700 bg-neutral-900 text-neutral-400 hover:bg-neutral-800 hover:text-neutral-300"
+                }`}
+              >
+                ⋯
+              </button>
+              {moreMenuOpen && (
+                <div
+                  ref={moreMenuRef}
+                  role="menu"
+                  className="absolute left-0 top-full z-50 mt-1 flex min-w-[168px] flex-col rounded-lg border border-neutral-700 bg-neutral-900 py-1 shadow-xl"
+                >
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { toggleSaveAsTemplate(); setMoreMenuOpen(false); }}
+                    className="px-3 py-2 text-left text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
+                  >
+                    Save as Template
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setSaveRevisionOpen(true); setMoreMenuOpen(false); }}
+                    disabled={!meta}
+                    title={!meta ? "No workflow loaded" : "Save a named revision checkpoint"}
+                    className="px-3 py-2 text-left text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200 disabled:cursor-default disabled:text-neutral-600"
+                  >
+                    Save Revision
+                  </button>
+                  <div className="mx-2 my-1 border-t border-neutral-800" role="separator" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setSaveFragmentOpen(true); setMoreMenuOpen(false); }}
+                    disabled={getNodes().filter((n) => n.selected).length === 0}
+                    title={
+                      getNodes().filter((n) => n.selected).length === 0
+                        ? "Select nodes on the canvas first"
+                        : "Save selected nodes as a reusable fragment"
+                    }
+                    className="px-3 py-2 text-left text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200 disabled:cursor-default disabled:text-neutral-600"
+                  >
+                    Save as Fragment
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { setFragmentBrowserOpen(true); setMoreMenuOpen(false); }}
+                    className="px-3 py-2 text-left text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
+                  >
+                    Insert Fragment
+                  </button>
+                  <div className="mx-2 my-1 border-t border-neutral-800" role="separator" />
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => { void handleExport(); setMoreMenuOpen(false); }}
+                    disabled={!meta || exporting}
+                    title={!meta ? "No workflow loaded" : undefined}
+                    className="px-3 py-2 text-left text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-200 disabled:cursor-default disabled:text-neutral-600"
+                  >
+                    {exporting ? "Exporting…" : "Export"}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Health strip — third row, only renders when there are signals */}
