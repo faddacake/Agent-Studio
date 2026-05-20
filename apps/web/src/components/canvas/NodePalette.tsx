@@ -173,14 +173,16 @@ export function NodePalette({
 
   if (!open) {
     return (
-      <button
-        type="button"
-        onClick={onToggle}
-        className="fixed left-4 top-20 z-30 flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100"
-        title="Open node palette"
-      >
-        <PlusIcon />
-      </button>
+      <div className="relative shrink-0 w-0 z-30">
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute left-2 top-[72px] flex h-10 w-10 items-center justify-center rounded-lg border border-neutral-700 bg-neutral-900 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100"
+          title="Open node palette"
+        >
+          <PlusIcon />
+        </button>
+      </div>
     );
   }
 

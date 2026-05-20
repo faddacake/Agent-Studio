@@ -1196,7 +1196,8 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           onNodeClick={handleNodeClick}
           onNodeDragStart={handleNodeDragStart}
           onPaneClick={handlePaneClick}
-          fitView
+          fitView={nodes.length > 0}
+          fitViewOptions={{ padding: 0.2, duration: 200 }}
           proOptions={{ hideAttribution: true }}
           defaultEdgeOptions={{ type: "default", animated: true }}
           className="bg-neutral-950"
@@ -1215,10 +1216,10 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
         </ReactFlow>
 
         {/* Top bar: workflow controls + health strip */}
-        <div className="absolute left-3 right-2 top-3 z-10 flex flex-col items-start gap-1">
+        <div className="absolute left-3 right-2 top-3 z-10 flex flex-col items-start gap-1 min-w-0">
 
           {/* ── Row 1: navigation · identity · run controls ── */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden">
             <Link
               href="/workflows"
               className="text-xs text-neutral-500 transition-colors hover:text-neutral-300"
@@ -1434,7 +1435,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           </div>
 
           {/* ── Row 2: editing tools ── */}
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={toggleTemplatePicker}
