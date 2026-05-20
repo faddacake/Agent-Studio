@@ -28,6 +28,7 @@ const CATEGORY_META: Record<
   { label: string; order: number }
 > = {
   [NodeCategory.Agent]:      { label: "Agent",        order: -1 },
+  [NodeCategory.Memory]:     { label: "Memory",       order: -0.5 },
   [NodeCategory.Generation]: { label: "Generation",   order: 0 },
   [NodeCategory.Input]:      { label: "Input / Output", order: 1 },
   [NodeCategory.Output]:     { label: "Input / Output", order: 1 },

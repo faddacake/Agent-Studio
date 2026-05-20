@@ -37,6 +37,7 @@ import { SaveFragmentDialog } from "./SaveFragmentDialog";
 import { FragmentBrowser } from "@/components/fragments/FragmentBrowser";
 import { CustomNode } from "./CustomNode";
 import { AgentNode } from "./AgentNode";
+import { ObsidianMemoryNode } from "./ObsidianMemoryNode";
 import { ConfirmReplaceDialog } from "./ConfirmReplaceDialog";
 import { ConfirmDeleteDialog } from "./ConfirmDeleteDialog";
 import { InspectorPanel } from "@/components/inspector";
@@ -55,8 +56,9 @@ import { SchedulePanel } from "./SchedulePanel";
 // ── Node types map (stable reference) ──
 
 const nodeTypes: NodeTypes = {
-  custom:       CustomNode,
-  "react-agent": AgentNode,
+  custom:            CustomNode,
+  "react-agent":     AgentNode,
+  "obsidian-memory": ObsidianMemoryNode,
 };
 
 // ── Run-status dot colors (mirrors list-page RUN_DOT_COLOR) ──
