@@ -24,25 +24,48 @@ export function parseDuckDuckGoHtml(html: string, maxResults: number): WebSearch
 
   // DDG HTML wraps results in <div class="result__body">
   // Title in <a class="result__a" href="...">TEXT</a>
-  // Snippet in <a class="result__snippet">TEXT</a>
+  // Snippet in <div class="result__snippet">TEXT</div>
   // URL in the href of result__a (may be a redirect, decode later)
 
-  const resultBlockRe = /<div class="result__body">([\s\S]*?)<\/div>\s*<\/div>/g;
+  // Fallback: split on result__body divs using a greedy approach per block
+  // Find each result__body section by locating its start and matching the closing tag depth
+  const bodyStartRe = /<div class="result__body">/g;
   const titleRe = /<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/;
-  const snippetRe = /<a[^>]*class="result__snippet"[^>]*>([\s\S]*?)<\/a>/;
+  // Match the opening tag of the snippet container (div, a, or span), then extract inner content
+  // by finding the correct closing tag at the same depth.
+  const snippetStartRe = /<(div|a|span)[^>]*class="result__snippet"[^>]*>/;
 
-  let match: RegExpExecArray | null;
-  while ((match = resultBlockRe.exec(html)) !== null && results.length < maxResults) {
-    const block = match[1];
+  // Extract result blocks by tracking div depth from each result__body start
+  let startMatch: RegExpExecArray | null;
+  while ((startMatch = bodyStartRe.exec(html)) !== null && results.length < maxResults) {
+    const start = startMatch.index;
+    let depth = 0;
+    let end = start;
+
+    // Walk forward counting open/close div tags to find the matching close
+    const divRe = /<\/?div[^>]*>/g;
+    divRe.lastIndex = start;
+    let divMatch: RegExpExecArray | null;
+    while ((divMatch = divRe.exec(html)) !== null) {
+      if (divMatch[0].startsWith("</")) {
+        depth--;
+        if (depth === 0) {
+          end = divMatch.index + divMatch[0].length;
+          break;
+        }
+      } else if (!divMatch[0].endsWith("/>")) {
+        depth++;
+      }
+    }
+    if (end <= start) continue;
+
+    const block = html.slice(start, end);
     const titleMatch = titleRe.exec(block);
-    const snippetMatch = snippetRe.exec(block);
     if (!titleMatch) continue;
 
     const rawUrl = titleMatch[1];
     const title = stripHtmlTags(titleMatch[2]).trim();
-    const snippet = snippetMatch ? stripHtmlTags(snippetMatch[1]).trim() : "";
-
-    // DDG may wrap the URL in a redirect; decode if needed
+    const snippet = extractSnippetContent(block, snippetStartRe);
     const url = decodeUrl(rawUrl);
     if (!url || !title) continue;
 
@@ -50,6 +73,35 @@ export function parseDuckDuckGoHtml(html: string, maxResults: number): WebSearch
   }
 
   return results;
+}
+
+/**
+ * Extract the inner content of the first element matching `startRe` (which must
+ * capture the tag name in group 1), tracking nested tags of the same name so we
+ * correctly find the matching close tag even when the content contains nested
+ * elements of the same tag type.
+ */
+function extractSnippetContent(block: string, startRe: RegExp): string {
+  const startMatch = startRe.exec(block);
+  if (!startMatch) return "";
+  const tagName = startMatch[1];
+  const contentStart = startMatch.index + startMatch[0].length;
+  let depth = 1;
+  const tagRe = new RegExp(`</?${tagName}[^>]*>`, "g");
+  tagRe.lastIndex = contentStart;
+  let tagMatch: RegExpExecArray | null;
+  while ((tagMatch = tagRe.exec(block)) !== null) {
+    if (tagMatch[0].startsWith("</")) {
+      depth--;
+      if (depth === 0) {
+        return stripHtmlTags(block.slice(contentStart, tagMatch.index)).trim();
+      }
+    } else if (!tagMatch[0].endsWith("/>")) {
+      depth++;
+    }
+  }
+  // No matching close found — return from content start to end of block
+  return stripHtmlTags(block.slice(contentStart)).trim();
 }
 
 function stripHtmlTags(html: string): string {
@@ -60,7 +112,8 @@ function stripHtmlTags(html: string): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ");
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, code: string) => String.fromCharCode(Number(code)));
 }
 
 function decodeUrl(raw: string): string {
@@ -73,18 +126,26 @@ function decodeUrl(raw: string): string {
   }
   if (raw.startsWith("http")) return raw;
   if (raw.startsWith("//")) return "https:" + raw;
-  return raw;
+  return ""; // Unknown format — caller's !url guard will filter it out
 }
 
 /** Search via DuckDuckGo HTML endpoint. */
 async function searchDuckDuckGo(query: string, maxResults: number): Promise<WebSearchResult[]> {
   const url = `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const res = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; IteraStudio/1.0; web-search-node)",
-      "Accept": "text/html",
-    },
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        "User-Agent": "Mozilla/5.0 (compatible; IteraStudio/1.0; web-search-node)",
+        "Accept": "text/html",
+      },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error(`DuckDuckGo responded ${res.status}`);
   const html = await res.text();
   return parseDuckDuckGoHtml(html, maxResults);
@@ -93,7 +154,17 @@ async function searchDuckDuckGo(query: string, maxResults: number): Promise<WebS
 /** Search via SerpAPI. */
 async function searchSerpApi(query: string, maxResults: number, apiKey: string): Promise<WebSearchResult[]> {
   const url = `https://serpapi.com/search?api_key=${encodeURIComponent(apiKey)}&q=${encodeURIComponent(query)}&num=${maxResults}&engine=google`;
-  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15_000);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      signal: controller.signal,
+      headers: { "Accept": "application/json" },
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error(`SerpAPI responded ${res.status}`);
   const data = await res.json() as { organic_results?: Array<{ title?: string; snippet?: string; link?: string }> };
   return (data.organic_results ?? []).slice(0, maxResults).map((r) => ({

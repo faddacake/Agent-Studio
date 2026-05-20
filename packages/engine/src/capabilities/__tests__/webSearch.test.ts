@@ -21,18 +21,19 @@ import {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 /** Build a minimal DDG-style HTML block for a single result. */
-function makeDdgBlock(title: string, snippet: string, url: string): string {
-  return `
-    <div class="result__body">
-      <a class="result__a" href="${url}">${title}</a>
-      <a class="result__snippet">${snippet}</a>
-    </div>
-    </div>
-  `;
+function makeDdgBlock(result: { title: string; snippet: string; url: string }): string {
+  return `<div class="result results_links results_links_deep web-result">
+  <div class="result__body">
+    <h2 class="result__title">
+      <a class="result__a" href="${result.url}">${result.title}</a>
+    </h2>
+    <div class="result__snippet">${result.snippet}</div>
+  </div>
+</div>`;
 }
 
 function makeDdgHtml(results: Array<{ title: string; snippet: string; url: string }>): string {
-  return results.map((r) => makeDdgBlock(r.title, r.snippet, r.url)).join("\n");
+  return results.map(makeDdgBlock).join("\n");
 }
 
 function makeCtx(
@@ -93,6 +94,15 @@ describe("parseDuckDuckGoHtml", () => {
     assert.equal(results.length, 1);
     assert.equal(results[0].title, "AI & Agents");
     assert.equal(results[0].snippet, "Deep <learning> overview");
+  });
+
+  it("decodes DDG uddg= redirect URLs", () => {
+    const html = makeDdgHtml([
+      { title: "Example Page", snippet: "A snippet", url: "//duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com%2Fpage" }
+    ]);
+    const results = parseDuckDuckGoHtml(html, 1);
+    assert.equal(results.length, 1);
+    assert.equal(results[0].url, "https://example.com/page");
   });
 });
 
