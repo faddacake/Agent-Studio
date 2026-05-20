@@ -623,6 +623,114 @@ export const reactAgentNode: NodeDefinition = {
 };
 
 /**
+ * Sub-Agent node — a focused worker agent callable by a parent ReAct Agent.
+ *
+ * Enables Planner → Researcher → Executor multi-agent patterns. A parent
+ * ReAct Agent invokes this node as a tool; the sub-agent runs its own
+ * ReAct loop with its configured role and tools, then returns a result.
+ *
+ * The provider/model/apiKey fields may be left blank to inherit values
+ * from the parent agent at runtime.
+ */
+export const subAgentNode: NodeDefinition = {
+  type:        NodeType.SubAgent,
+  label:       "Sub-Agent",
+  description: "A specialized worker agent callable by a parent ReAct Agent as a tool. Configure a role and tools to create Researcher, Executor, or Planner patterns.",
+  category:    NodeCategory.Agent,
+  icon:        "cpu",
+
+  inputs: [
+    {
+      id:          "task_in",
+      label:       "Task",
+      type:        PortType.Text,
+      required:    false,
+      description: "The task or goal for this sub-agent to complete",
+    },
+  ],
+  outputs: [
+    {
+      id:          "result_out",
+      label:       "Result",
+      type:        PortType.Text,
+      description: "The sub-agent's final answer",
+    },
+    {
+      id:          "steps_out",
+      label:       "Steps",
+      type:        PortType.Json,
+      description: "The reasoning steps taken by the sub-agent",
+    },
+  ],
+
+  parameterSchema: [
+    {
+      key:          "role",
+      label:        "Role",
+      type:         "string",
+      defaultValue: "",
+      description:  "Persona or specialization for this sub-agent. E.g. 'You are a research specialist focused on finding accurate, up-to-date information.'",
+    },
+    {
+      key:          "tools",
+      label:        "Tools",
+      type:         "json",
+      defaultValue: [],
+      description:  "Node types this sub-agent can use as tools (e.g. [\"web-search\", \"obsidian-memory\"])",
+    },
+    {
+      key:          "maxSteps",
+      label:        "Max Steps",
+      type:         "number",
+      defaultValue: 5,
+      min:          1,
+      max:          15,
+      description:  "Maximum ReAct reasoning steps for this sub-agent",
+    },
+    {
+      key:          "provider",
+      label:        "LLM Provider",
+      type:         "enum",
+      defaultValue: "",
+      options: [
+        { value: "",            label: "Inherit from parent" },
+        { value: "anthropic",   label: "Anthropic" },
+        { value: "openai",      label: "OpenAI" },
+        { value: "ollama",      label: "Ollama (local)" },
+      ],
+      description: "LLM provider for this sub-agent. Leave blank to inherit from the parent agent.",
+    },
+    {
+      key:          "model",
+      label:        "Model",
+      type:         "string",
+      defaultValue: "",
+      description:  "Model ID override. Leave blank to inherit from parent.",
+    },
+    {
+      key:          "apiKey",
+      label:        "API Key",
+      type:         "string",
+      defaultValue: "",
+      description:  "API key override. Leave blank to inherit from the parent agent's key.",
+    },
+  ],
+
+  uiSchema: {
+    groups: [
+      { label: "Role",     fields: ["role"] },
+      { label: "Tools",    fields: ["tools"] },
+      { label: "Behavior", fields: ["maxSteps"] },
+      { label: "LLM",      fields: ["provider", "model", "apiKey"] },
+    ],
+  },
+
+  runtimeKind: NodeRuntimeKind.Capability,
+  tags:        ["agent", "multi-agent", "delegation"],
+  isAvailable: true,
+};
+
+/**
  * Obsidian Memory node — file-based persistent knowledge store.
  *
  * Reads and writes Markdown notes (with YAML frontmatter) to a configurable
@@ -894,6 +1002,7 @@ export const webSearchNode: NodeDefinition = {
 
 export const capabilityNodes: NodeDefinition[] = [
   reactAgentNode,
+  subAgentNode,
   obsidianMemoryNode,
   webSearchNode,
   bestOfNNode,

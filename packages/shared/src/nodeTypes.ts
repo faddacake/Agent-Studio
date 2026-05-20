@@ -1,6 +1,7 @@
 export enum NodeType {
   // Agent
   ReactAgent = "react-agent",
+  SubAgent   = "sub-agent",
 
   // Memory
   ObsidianMemory = "obsidian-memory",
