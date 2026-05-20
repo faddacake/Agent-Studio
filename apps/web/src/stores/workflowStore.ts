@@ -27,7 +27,7 @@ import {
 
 // Node types that use a specialized React Flow component instead of CustomNode.
 // All other nodes fall back to the generic "custom" component.
-const SPECIALIZED_NODE_TYPES = new Set(["react-agent", "obsidian-memory"]);
+const SPECIALIZED_NODE_TYPES = new Set(["react-agent", "obsidian-memory", "sub-agent"]);
 
 export function toFlowNode(wn: WorkflowNode): Node {
   return {
