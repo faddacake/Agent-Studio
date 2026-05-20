@@ -33,6 +33,7 @@ export type {
   NodeExecutionContext,
   NodeExecutionResult,
   SerializableNodeDefinition,
+  ApprovalResult,
 } from "./nodeDefinition.js";
 
 // ── Node Registry ──

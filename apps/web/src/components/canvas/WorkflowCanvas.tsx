@@ -15,9 +15,9 @@ import "@xyflow/react/dist/style.css";
 import Link from "next/link";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import type { Connection, Edge, Node, OnBeforeDelete } from "@xyflow/react";
-import type { WorkflowNode, WorkflowGraph } from "@iterastudio/shared";
-import { nodeRegistry, isArtifactRef, type NodeDefinition } from "@iterastudio/shared";
-import type { WorkflowEdge } from "@iterastudio/shared";
+import type { WorkflowNode, WorkflowGraph } from "@aistudio/shared";
+import { nodeRegistry, isArtifactRef, type NodeDefinition } from "@aistudio/shared";
+import type { WorkflowEdge } from "@aistudio/shared";
 import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 import { useWorkflowStore, fromFlowNode } from "@/stores/workflowStore";
 import { filterPresets } from "@/lib/presets";
@@ -414,7 +414,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   const [fragmentBrowserOpen, setFragmentBrowserOpen] = useState(false);
   const { getNodes } = useReactFlow();
 
-  const getSelectedFragment = useCallback((): import("@iterastudio/shared").WorkflowGraph => {
+  const getSelectedFragment = useCallback((): import("@aistudio/shared").WorkflowGraph => {
     const selected = getNodes().filter((n) => n.selected);
     const selectedIds = new Set(selected.map((n) => n.id));
     const selectedEdges = edges.filter(
@@ -434,7 +434,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   }, [getNodes, edges]);
 
   const handleInsertFragmentGraph = useCallback(
-    (graph: import("@iterastudio/shared").WorkflowGraph) => {
+    (graph: import("@aistudio/shared").WorkflowGraph) => {
       insertFragment(graph, 120, 120);
     },
     [insertFragment],
@@ -448,7 +448,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
     fragmentInsertedRef.current = true;
     fetch("/api/fragments")
       .then((r) => (r.ok ? r.json() : null))
-      .then((list: Array<{ id: string; graph: import("@iterastudio/shared").WorkflowGraph }> | null) => {
+      .then((list: Array<{ id: string; graph: import("@aistudio/shared").WorkflowGraph }> | null) => {
         if (!list) return;
         const match = list.find((f) => f.id === initialFragmentId);
         if (match) insertFragment(match.graph, 120, 120);
