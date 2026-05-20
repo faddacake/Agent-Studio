@@ -23,7 +23,7 @@ import type {
 import { nodeRegistry } from "@aistudio/shared";
 import { nodeExecutor } from "../executor.js";
 import { createLLMClient, LLMError, isUserFacingLLMError } from "../llm/index.js";
-import type { LLMMessage } from "../llm/index.js";
+import type { LLMMessage, LLMTextClient } from "../llm/index.js";
 
 // ── Tool description ───────────────────────────────────────────────────────────
 
@@ -189,7 +189,11 @@ export function parseReflectionResponse(text: string): ParsedReflection {
 
   const revisedMatch = text.match(/Revised Answer:\s*([\s\S]*?)$/);
   if (revisedMatch) {
-    return { critique, revisedAnswer: revisedMatch[1].trim(), noRevisionNeeded: false };
+    const trimmed = revisedMatch[1].trim();
+    if (trimmed) {
+      return { critique, revisedAnswer: trimmed, noRevisionNeeded: false };
+    }
+    // Empty "Revised Answer:" body — treat as no revision needed
   }
 
   // Fallback: if no clear signal, treat as "no revision needed"
@@ -266,7 +270,7 @@ async function runReflectionLoop(
   goal: string,
   initialAnswer: string,
   rounds: number,
-  llm: ReturnType<typeof createLLMClient>,
+  llm: LLMTextClient,
   steps: AgentStep[],
   context: NodeExecutionContext,
 ): Promise<string> {
@@ -355,6 +359,7 @@ export async function executeReactAgent(
   const maxSteps  = Math.min(20, Math.max(1, Number(params.maxSteps ?? 10)));
   const toolTypes = parseToolTypes(params.tools);
   const enableReflection = Boolean(params.reflection);
+  // Clamped to [1, 3]. Set reflection: false (not reflectionRounds: 0) to disable.
   const reflectionRounds = Math.min(3, Math.max(1, Number(params.reflectionRounds ?? 2)));
 
   // Validate API key early (Ollama is exempt)

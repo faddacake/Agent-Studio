@@ -63,6 +63,12 @@ no revision needed`;
     const result = parseReflectionResponse(text);
     assert.equal(result.noRevisionNeeded, true);
   });
+
+  it("treats 'Revised Answer:' with empty body as noRevisionNeeded", () => {
+    const result = parseReflectionResponse("Critique: Not bad.\nRevised Answer:   ");
+    assert.equal(result.noRevisionNeeded, true);
+    assert.equal(result.revisedAnswer, undefined);
+  });
 });
 
 describe("buildReflectionPrompt", () => {
