@@ -195,6 +195,9 @@ function makeDispatch(runId: string, outputDir: string): DispatchJob {
         onAgentStep: (step) => {
           coordinator.onAgentStep(job.runId, job.nodeId, step);
         },
+        onApprovalRequired: (pendingAnswer, stepIndex) => {
+          return coordinator.requestApproval(job.runId, job.nodeId, pendingAnswer, stepIndex);
+        },
       };
 
       const result = await nodeExecutor.execute(context);

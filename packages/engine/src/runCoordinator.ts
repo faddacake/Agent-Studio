@@ -1,4 +1,4 @@
-import type { WorkflowGraph, AgentStep } from "@aistudio/shared";
+import type { WorkflowGraph, AgentStep, ApprovalResult } from "@aistudio/shared";
 import {
   buildExecutionGraph,
   getReadyNodes,
@@ -80,7 +80,9 @@ export type RunEvent =
   | { type: "run:cancelled"; runId: string }
   | { type: "run:budget_exceeded"; runId: string; totalCost: number; budgetCap: number }
   /** Emitted each time a ReAct Agent node completes one Thought/Action/Observation step */
-  | { type: "agent:step"; runId: string; nodeId: string; step: AgentStep };
+  | { type: "agent:step"; runId: string; nodeId: string; step: AgentStep }
+  /** Emitted when a ReAct Agent node pauses to await human approval */
+  | { type: "agent:approval_required"; runId: string; nodeId: string; pendingAnswer: string; stepIndex: number };
 
 export type EventListener = (event: RunEvent) => void;
 
@@ -117,6 +119,7 @@ export type DispatchJob = (job: {
 export class RunCoordinator {
   private runs = new Map<string, RunState>();
   private listeners: EventListener[] = [];
+  private pendingApprovals = new Map<string, (result: ApprovalResult) => void>();
 
   /** Subscribe to run events */
   on(listener: EventListener): () => void {
@@ -294,6 +297,35 @@ export class RunCoordinator {
     if (!nodeState.agentSteps) nodeState.agentSteps = [];
     nodeState.agentSteps.push(step);
     this.emit({ type: "agent:step", runId, nodeId, step });
+  }
+
+  /**
+   * Called by the agent executor when it needs human approval before finalizing.
+   * Emits an `agent:approval_required` event so the SSE stream signals the UI.
+   * Returns a promise that resolves when the user responds via resolveApproval().
+   */
+  requestApproval(
+    runId: string,
+    nodeId: string,
+    pendingAnswer: string,
+    stepIndex: number,
+  ): Promise<ApprovalResult> {
+    return new Promise<ApprovalResult>((resolve) => {
+      this.pendingApprovals.set(runId, resolve);
+      this.emit({ type: "agent:approval_required", runId, nodeId, pendingAnswer, stepIndex });
+    });
+  }
+
+  /**
+   * Called by the POST /approve API route when the user approves or rejects.
+   * Returns true if a pending approval was found and resolved.
+   */
+  resolveApproval(runId: string, approved: boolean, feedback?: string): boolean {
+    const resolve = this.pendingApprovals.get(runId);
+    if (!resolve) return false;
+    this.pendingApprovals.delete(runId);
+    resolve({ approved, feedback });
+    return true;
   }
 
   /**

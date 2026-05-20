@@ -41,6 +41,8 @@ export interface RunDebuggerPanelProps {
   defaultView?: "tiers" | "flat";
   /** Called when a node row is clicked (for canvas highlighting, etc.). */
   onNodeClick?: (nodeId: string) => void;
+  /** Workflow ID — required for the Human-in-the-Loop approval API call */
+  workflowId?: string;
 }
 
 // ── Main component ──
@@ -49,6 +51,7 @@ export function RunDebuggerPanel({
   snapshot,
   defaultView = "tiers",
   onNodeClick,
+  workflowId,
 }: RunDebuggerPanelProps) {
   const [view, setView] = useState<"tiers" | "flat">(defaultView);
   const [expandedNode, setExpandedNode] = useState<string | null>(null);
@@ -167,6 +170,29 @@ export function RunDebuggerPanel({
           <ViewToggle label="Flat" active={view === "flat"} onClick={() => setView("flat")} />
         </div>
       </div>
+
+      {/* ── Human-in-the-Loop approval banner ── */}
+      {(() => {
+        if (!workflowId) return null;
+        // Find first running node that has a step awaiting approval
+        const awaitingNode = snapshot.nodes.find((n) =>
+          n.status === "running" &&
+          n.agentSteps?.some((s) => s.requiresApproval && !s.isFinal),
+        );
+        if (!awaitingNode) return null;
+        const pendingStep = awaitingNode.agentSteps!.find((s) => s.requiresApproval && !s.isFinal);
+        if (!pendingStep?.answer) return null;
+
+        return (
+          <ApprovalBanner
+            workflowId={workflowId}
+            runId={snapshot.runId}
+            nodeId={awaitingNode.nodeId}
+            nodeLabel={awaitingNode.label}
+            pendingAnswer={pendingStep.answer}
+          />
+        );
+      })()}
 
       {/* ── Node list ── */}
       <div className="flex-1 overflow-y-auto">
@@ -686,4 +712,103 @@ function formatTimestamp(ts: number): string {
     minute: "2-digit",
     second: "2-digit",
   });
+}
+
+// ── Human-in-the-Loop Approval Banner ──
+
+function ApprovalBanner({
+  workflowId,
+  runId,
+  nodeLabel,
+  pendingAnswer,
+}: {
+  workflowId: string;
+  runId: string;
+  nodeId: string;
+  nodeLabel: string;
+  pendingAnswer: string;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState("");
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  const resolve = async (approved: boolean) => {
+    setSubmitting(true);
+    try {
+      await fetch(`/api/workflows/${workflowId}/runs/${runId}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approved, feedback: approved ? undefined : feedback }),
+      });
+    } finally {
+      setSubmitting(false);
+      setFeedback("");
+      setShowFeedback(false);
+    }
+  };
+
+  return (
+    <div className="border-b border-amber-700/40 bg-amber-950/20 px-4 py-3">
+      <div className="flex items-start gap-2">
+        <span className="mt-0.5 shrink-0 text-amber-400" aria-hidden="true">&#9646;</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-amber-300">
+            {nodeLabel} is waiting for your approval
+          </p>
+          <p className="mt-1 line-clamp-4 text-[11px] leading-relaxed text-neutral-300 whitespace-pre-wrap">
+            {pendingAnswer}
+          </p>
+
+          {showFeedback && (
+            <textarea
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              placeholder="Optional: explain what needs improvement&#8230;"
+              rows={2}
+              className="mt-2 w-full resize-none rounded border border-neutral-700 bg-neutral-900 px-2 py-1.5 text-[11px] text-neutral-200 placeholder:text-neutral-600 focus:border-neutral-500 focus:outline-none"
+            />
+          )}
+
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              disabled={submitting}
+              onClick={() => void resolve(true)}
+              className="rounded border border-emerald-600 bg-emerald-600/10 px-3 py-1 text-[11px] font-medium text-emerald-400 transition-colors hover:bg-emerald-600/20 disabled:cursor-default disabled:opacity-50"
+            >
+              {submitting ? "Sending…" : "✓ Approve"}
+            </button>
+            {!showFeedback ? (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => setShowFeedback(true)}
+                className="rounded border border-neutral-700 bg-neutral-900 px-3 py-1 text-[11px] font-medium text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-300 disabled:cursor-default disabled:opacity-50"
+              >
+                &#x2717; Reject
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={submitting}
+                onClick={() => void resolve(false)}
+                className="rounded border border-red-700 bg-red-900/20 px-3 py-1 text-[11px] font-medium text-red-400 transition-colors hover:bg-red-900/30 disabled:cursor-default disabled:opacity-50"
+              >
+                {submitting ? "Sending…" : "Send Rejection"}
+              </button>
+            )}
+            {showFeedback && (
+              <button
+                type="button"
+                onClick={() => { setShowFeedback(false); setFeedback(""); }}
+                className="text-[11px] text-neutral-600 hover:text-neutral-400"
+              >
+                Cancel
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

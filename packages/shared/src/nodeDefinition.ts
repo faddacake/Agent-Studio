@@ -151,11 +151,21 @@ export interface AgentStep {
   answer?: string;
   /** True if this step is a self-critique reflection round (not a normal reasoning step) */
   isReflection?: boolean;
+  /** If true, the step is awaiting user approval before finalizing — run is paused */
+  requiresApproval?: boolean;
   /** Unix timestamp (ms) when this step was emitted */
   timestamp: number;
 }
 
 // ── Execution Context & Result ──
+
+/** Result of a human-in-the-loop approval request */
+export interface ApprovalResult {
+  /** Whether the user approved the agent's proposed answer */
+  approved: boolean;
+  /** Optional feedback to send back to the agent when rejecting */
+  feedback?: string;
+}
 
 export interface NodeExecutionContext {
   /** The node instance ID within the workflow */
@@ -180,6 +190,8 @@ export interface NodeExecutionContext {
    * can display a live reasoning trace. Optional — ignored by all other nodes.
    */
   onAgentStep?: (step: AgentStep) => void;
+  /** Optional callback: called when agent needs human approval. Resolves with approve/reject. */
+  onApprovalRequired?: (pendingAnswer: string, stepIndex: number) => Promise<ApprovalResult>;
 }
 
 export interface NodeExecutionResult {

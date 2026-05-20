@@ -584,6 +584,13 @@ export const reactAgentNode: NodeDefinition = {
       description: "Array of node type strings the agent can use as tools, e.g. [\"prompt-template\"]. Empty = no tools (reasoning only).",
     },
     {
+      key: "requireApproval",
+      label: "Require Approval",
+      type: "boolean",
+      defaultValue: false,
+      description: "When enabled, the agent pauses before finalizing its answer and waits for your approval. You can approve or reject with feedback in the Run Debugger.",
+    },
+    {
       key: "reflection",
       label: "Enable Reflection",
       type: "boolean",
@@ -606,7 +613,7 @@ export const reactAgentNode: NodeDefinition = {
     groups: [
       { label: "Goal",     fields: ["goal"] },
       { label: "LLM",      fields: ["provider", "model", "apiKey"] },
-      { label: "Behavior", fields: ["maxSteps", "tools", "reflection", "reflectionRounds"] },
+      { label: "Behavior", fields: ["maxSteps", "tools", "requireApproval", "reflection", "reflectionRounds"] },
     ],
   },
 

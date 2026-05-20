@@ -358,6 +358,7 @@ export async function executeReactAgent(
                     (params.__apiKey as string | undefined);
   const maxSteps  = Math.min(20, Math.max(1, Number(params.maxSteps ?? 10)));
   const toolTypes = parseToolTypes(params.tools);
+  const requireApproval = Boolean(params.requireApproval);
   const enableReflection = Boolean(params.reflection);
   // Clamped to [1, 3]. Set reflection: false (not reflectionRounds: 0) to disable.
   const reflectionRounds = Math.min(3, Math.max(1, Number(params.reflectionRounds ?? 2)));
@@ -424,6 +425,36 @@ export async function executeReactAgent(
 
     // ── Final Answer branch ───────────────────────────────────────────────
     if (parsed.finalAnswer !== undefined) {
+      if (requireApproval && context.onApprovalRequired) {
+        // Emit a "pending approval" step — visible in the Run Debugger
+        const pendingStep: AgentStep = {
+          index:            i,
+          thought:          parsed.thought,
+          isFinal:          false,
+          requiresApproval: true,
+          answer:           parsed.finalAnswer,
+          timestamp:        Date.now(),
+        };
+        steps.push(pendingStep);
+        context.onAgentStep?.(pendingStep);
+
+        // Await human decision (promise resolved by POST /approve)
+        const approval = await context.onApprovalRequired(parsed.finalAnswer, i);
+
+        if (!approval.approved) {
+          // Rejection: add feedback and continue the loop
+          const feedback = approval.feedback?.trim() ||
+            "Your proposed answer was rejected. Please reconsider your approach and provide a better answer.";
+          messages.push({
+            role:    "user",
+            content: `Your proposed answer was reviewed and rejected.\nFeedback: ${feedback}\n\nPlease revise your answer.`,
+          });
+          continue; // back to top of loop for another reasoning cycle
+        }
+        // Approved
+      }
+
+      // Approved or approval not required — finalize
       const step: AgentStep = {
         index:     i,
         thought:   parsed.thought,

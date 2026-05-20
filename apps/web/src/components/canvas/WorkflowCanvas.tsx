@@ -1632,6 +1632,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
                 <RunDebuggerPanel
                   snapshot={debugSnapshot}
                   onNodeClick={(nodeId) => selectNode(nodeId)}
+                  workflowId={meta?.id}
                 />
               ) : (
                 <div className="px-4 py-4 text-xs text-neutral-500">
