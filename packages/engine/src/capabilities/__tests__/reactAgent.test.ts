@@ -71,6 +71,45 @@ no revision needed`;
   });
 });
 
+describe("executeReactAgent — depth guard", () => {
+  it("throws when __agentDepth exceeds 2", async () => {
+    const { executeReactAgent } = await import("../reactAgent.js");
+    const ctx = {
+      nodeId:    "depth-test",
+      runId:     "run1",
+      inputs:    { goal_in: "do something" },
+      params:    { __agentDepth: 3, provider: "anthropic", apiKey: "sk-test" },
+      outputDir: "/tmp",
+    };
+    await assert.rejects(
+      () => executeReactAgent(ctx as any, {} as any),
+      (err: Error) => {
+        assert.ok(err.message.includes("nesting depth exceeded"), err.message);
+        return true;
+      },
+    );
+  });
+
+  it("treats NaN __agentDepth as 0 (no guard trigger)", async () => {
+    const { executeReactAgent } = await import("../reactAgent.js");
+    const ctx = {
+      nodeId:    "nan-depth-test",
+      runId:     "run1",
+      inputs:    { goal_in: "test" },
+      params:    { __agentDepth: "not-a-number", provider: "anthropic", apiKey: "sk-invalid" },
+      outputDir: "/tmp",
+    };
+    // Should proceed past depth guard (NaN treated as 0) and fail on LLM auth
+    await assert.rejects(
+      () => executeReactAgent(ctx as any, {} as any),
+      (err: Error) => {
+        assert.ok(!err.message.includes("nesting depth"), err.message);
+        return true;
+      },
+    );
+  });
+});
+
 describe("buildReflectionPrompt", () => {
   it("includes the goal in the output", () => {
     const prompt = buildReflectionPrompt("Summarize quantum computing", "Quantum computing uses qubits.", 1);

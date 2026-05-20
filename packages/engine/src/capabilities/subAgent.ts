@@ -37,9 +37,9 @@ export async function executeSubAgent(
     model?: string;
   };
 
-  const provider = ((params.provider as string | undefined)?.trim() || parentCreds.provider) ?? "anthropic";
-  const model    = ((params.model    as string | undefined)?.trim() || parentCreds.model)    ?? "";
-  const apiKey   = ((params.apiKey   as string | undefined)?.trim() || parentCreds.apiKey)   ?? "";
+  const provider = (params.provider as string | undefined)?.trim() || parentCreds.provider || "anthropic";
+  const model    = (params.model    as string | undefined)?.trim() || parentCreds.model    || "";
+  const apiKey   = (params.apiKey   as string | undefined)?.trim() || parentCreds.apiKey   || "";
 
   // ── Role prefix ───────────────────────────────────────────────────────────
   const role = (params.role as string | undefined)?.trim() ?? "";

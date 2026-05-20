@@ -237,7 +237,8 @@ async function callTool(
     provider: context.params.provider as string | undefined,
     model:    context.params.model    as string | undefined,
   };
-  const currentDepth = Number(context.params.__agentDepth ?? 0);
+  const rawCurrentDepth = Number(context.params.__agentDepth ?? 0);
+  const currentDepth = Number.isFinite(rawCurrentDepth) ? rawCurrentDepth : 0;
 
   const syntheticCtx: NodeExecutionContext = {
     nodeId:    `${context.nodeId}--tool-${toolName}-${Date.now()}`,
@@ -369,7 +370,8 @@ export async function executeReactAgent(
                     (params.__apiKey as string | undefined);
   const maxSteps  = Math.min(20, Math.max(1, Number(params.maxSteps ?? 10)));
 
-  const agentDepth = Number(params.__agentDepth ?? 0);
+  const rawDepth = Number(params.__agentDepth ?? 0);
+  const agentDepth = Number.isFinite(rawDepth) ? rawDepth : 0;
   if (agentDepth > 2) {
     throw new Error(
       "Sub-agent nesting depth exceeded (max depth: 2). Avoid recursive agent chains.",
