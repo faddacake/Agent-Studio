@@ -253,9 +253,19 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (changes.some((c) => c.type === "remove")) {
       get().pushHistory();
     }
+    // "dimensions" fires when ReactFlow measures rendered node sizes (on load / resize).
+    // "select" fires when a node is selected/deselected — neither is a saveable data change.
+    // "position" with dragging:true is an intermediate drag state; only mark dirty on release.
+    const hasSaveableChange = changes.some(
+      (c) =>
+        c.type === "add" ||
+        c.type === "remove" ||
+        c.type === "replace" ||
+        (c.type === "position" && c.dragging !== true),
+    );
     set((s) => ({
       nodes: applyNodeChanges(changes, s.nodes),
-      dirty: true,
+      ...(hasSaveableChange ? { dirty: true } : {}),
     }));
   },
 
@@ -268,9 +278,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     if (changes.some((c) => c.type === "remove")) {
       get().pushHistory();
     }
+    // "select" on edges is not a saveable data change.
+    const hasSaveableChange = changes.some(
+      (c) => c.type === "add" || c.type === "remove" || c.type === "replace",
+    );
     set((s) => ({
       edges: applyEdgeChanges(changes, s.edges),
-      dirty: true,
+      ...(hasSaveableChange ? { dirty: true } : {}),
     }));
     for (const target of removedTargets) {
       get().markNodeAndDownstreamStale(target);

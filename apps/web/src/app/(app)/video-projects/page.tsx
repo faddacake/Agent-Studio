@@ -120,8 +120,8 @@ export default function VideoProjectsPage() {
             : `${projects.length} project${projects.length !== 1 ? "s" : ""}`}
         </p>
 
-        {/* Project grid */}
-        {!loading && (
+        {/* Project grid — only rendered when there are projects */}
+        {!loading && projects.length > 0 && (
           <EditorProjectsList
             projects={projects}
             onRename={handleRenamed}
