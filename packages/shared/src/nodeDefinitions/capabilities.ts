@@ -778,9 +778,100 @@ export const obsidianMemoryNode: NodeDefinition = {
   isAvailable: true,
 };
 
+/**
+ * Web Search node — search the web and return structured results.
+ *
+ * Supports DuckDuckGo (free, no API key) and SerpAPI (requires SERPAPI_KEY).
+ * Returns a structured results array and an LLM-readable text summary.
+ *
+ * Registers as a `web-search` tool alias so the ReAct Agent can call it
+ * via tools: ["web-search"].
+ */
+export const webSearchNode: NodeDefinition = {
+  type: "web-search",
+  label: "Web Search",
+  category: NodeCategory.Utility,
+  description: "Search the web and return clean results with titles, snippets, and URLs.",
+  icon: "search",
+
+  inputs: [
+    {
+      id: "query_in",
+      label: "Query",
+      type: PortType.Text,
+      required: false,
+      description: "Search query. Takes priority over the Query param when connected.",
+    },
+  ],
+  outputs: [
+    {
+      id: "results_out",
+      label: "Results",
+      type: PortType.Json,
+      description: "Array of { title, snippet, url } objects (structured results).",
+    },
+    {
+      id: "content_out",
+      label: "Summary",
+      type: PortType.Text,
+      description: "LLM-readable text summary of results (title + snippet + url per line).",
+    },
+  ],
+
+  parameterSchema: [
+    {
+      key: "query",
+      label: "Query",
+      type: "string",
+      placeholder: "e.g. latest news on AI agents",
+      description: "Search query used when query_in port is not connected.",
+    },
+    {
+      key: "provider",
+      label: "Provider",
+      type: "enum",
+      defaultValue: "duckduckgo",
+      options: [
+        { value: "duckduckgo", label: "DuckDuckGo (free, no key)" },
+        { value: "serpapi",    label: "SerpAPI (requires SERPAPI_KEY)" },
+      ],
+      description: "Which search provider to use. DuckDuckGo requires no API key.",
+    },
+    {
+      key: "maxResults",
+      label: "Max Results",
+      type: "number",
+      min: 1,
+      max: 10,
+      step: 1,
+      defaultValue: 5,
+      description: "Maximum number of results to return.",
+    },
+    {
+      key: "apiKey",
+      label: "API Key",
+      type: "string",
+      placeholder: "Your SerpAPI key",
+      description: "Required only for SerpAPI provider. Leave blank when using DuckDuckGo.",
+    },
+  ],
+
+  uiSchema: {
+    groups: [
+      { label: "Query",    fields: ["query"] },
+      { label: "Provider", fields: ["provider", "maxResults", "apiKey"] },
+    ],
+  },
+
+  runtimeKind: NodeRuntimeKind.Capability,
+  tags: ["search", "web", "tools", "agent", "duckduckgo"],
+  isAvailable: true,
+};
+
 export const capabilityNodes: NodeDefinition[] = [
   reactAgentNode,
   obsidianMemoryNode,
+  webSearchNode,
   bestOfNNode,
   clipScoringNode,
   socialFormatNode,

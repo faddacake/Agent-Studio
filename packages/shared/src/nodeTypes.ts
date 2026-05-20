@@ -5,6 +5,9 @@ export enum NodeType {
   // Memory
   ObsidianMemory = "obsidian-memory",
 
+  // Utility
+  WebSearch = "web-search",
+
   // Generation
   ImageGeneration = "image-generation",
   VideoGeneration = "video-generation",

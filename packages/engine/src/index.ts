@@ -47,6 +47,7 @@ export {
   registerCapabilityExecutors,
   executeReactAgent,
   executeObsidianMemory,
+  executeWebSearch,
   executeBestOfN,
   executeClipScoring,
   executeRanking,

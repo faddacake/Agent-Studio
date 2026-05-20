@@ -6,6 +6,7 @@ import { executeSocialFormat } from "./socialFormat.js";
 import { executeExportBundle } from "./exportBundle.js";
 import { executeReactAgent } from "./reactAgent.js";
 import { executeObsidianMemory } from "./obsidianMemory.js";
+import { executeWebSearch } from "./webSearch.js";
 import type { NodeDefinition, NodeExecutionContext, NodeExecutionResult } from "@aistudio/shared";
 
 export { executeBestOfN } from "./bestOfN.js";
@@ -15,6 +16,7 @@ export { executeSocialFormat } from "./socialFormat.js";
 export { executeExportBundle } from "./exportBundle.js";
 export { executeReactAgent } from "./reactAgent.js";
 export { executeObsidianMemory } from "./obsidianMemory.js";
+export { executeWebSearch } from "./webSearch.js";
 
 export {
   MockGeneratorAdapter,
@@ -69,4 +71,7 @@ export function registerCapabilityExecutors(): void {
   nodeExecutor.registerCapability("memory-append",   makeMemoryAlias("append"));
   nodeExecutor.registerCapability("memory-search",   makeMemoryAlias("search"));
   nodeExecutor.registerCapability("memory-read",     makeMemoryAlias("read"));
+
+  // Web Search — one canvas node type + tool alias for the ReAct Agent
+  nodeExecutor.registerCapability("web-search", executeWebSearch);
 }
