@@ -8,8 +8,8 @@ import {
   type TemplatePack,
   type PackAvailability,
   type TemplatePackSource,
-} from "@iterastudio/shared";
-import type { WorkflowGraph } from "@iterastudio/shared";
+} from "@aistudio/shared";
+import type { WorkflowGraph } from "@aistudio/shared";
 import { MiniGraphPreview } from "./MiniGraphPreview";
 import { persistPack } from "@/lib/templatePackStorage";
 import { ensurePacksLoaded } from "@/lib/initTemplatePacks";

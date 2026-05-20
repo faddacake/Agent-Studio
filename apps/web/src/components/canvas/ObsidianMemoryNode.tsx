@@ -71,14 +71,13 @@ function ObsidianMemoryNodeComponent({ id, data, selected }: NodeProps) {
   const operation = (params.operation as string | undefined) ?? "search";
   const vaultPath = (params.vaultPath as string | undefined)?.trim() || "/app/memory";
 
-  // Pull last result summary from the debug snapshot
+  // Pull run status from debug snapshot; pull last result from latestOutputsByNode
   const { runStatus, lastResult } = useWorkflowStore(useShallow((state) => {
-    if (!state.debugSnapshot) return { runStatus: null as string | null, lastResult: null as string | null };
-    const node = state.debugSnapshot.nodes.find((n) => n.nodeId === id);
-    const contentOut = node?.outputs?.content_out;
+    const debugNode = state.debugSnapshot?.nodes.find((n) => n.nodeId === id);
+    const latest = state.latestOutputsByNode?.[id];
     return {
-      runStatus:  node?.status ?? null,
-      lastResult: typeof contentOut === "string" ? contentOut.split("\n")[0].slice(0, 80) : null,
+      runStatus:  debugNode?.status ?? null,
+      lastResult: latest?.textSnippet?.split("\n")[0].slice(0, 80) ?? latest?.summary?.slice(0, 80) ?? null,
     };
   }));
 

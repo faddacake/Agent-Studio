@@ -5,7 +5,7 @@
  * videoCreationStarters is first so quick-social-reel appears first.
  */
 
-import { registerBuiltInPacks } from "@iterastudio/shared";
+import { registerBuiltInPacks } from "@aistudio/shared";
 import { rehydratePersistedPacks } from "./templatePackStorage";
 
 import videoCreationStarters from "../../../../templates/packs/video-creation-starters.json";

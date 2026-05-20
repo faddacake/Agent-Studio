@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { templatePackLoader, type TemplateEntry } from "@iterastudio/shared";
-import type { WorkflowGraph } from "@iterastudio/shared";
+import { templatePackLoader, type TemplateEntry } from "@aistudio/shared";
+import type { WorkflowGraph } from "@aistudio/shared";
 import { ensurePacksLoaded } from "@/lib/initTemplatePacks";
 
 export interface WorkflowEmptyStateProps {
