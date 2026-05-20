@@ -5,6 +5,8 @@ import { executeRanking } from "./ranking.js";
 import { executeSocialFormat } from "./socialFormat.js";
 import { executeExportBundle } from "./exportBundle.js";
 import { executeReactAgent } from "./reactAgent.js";
+import { executeObsidianMemory } from "./obsidianMemory.js";
+import type { NodeDefinition, NodeExecutionContext, NodeExecutionResult } from "@aistudio/shared";
 
 export { executeBestOfN } from "./bestOfN.js";
 export { executeClipScoring } from "./clipScoring.js";
@@ -12,6 +14,7 @@ export { executeRanking } from "./ranking.js";
 export { executeSocialFormat } from "./socialFormat.js";
 export { executeExportBundle } from "./exportBundle.js";
 export { executeReactAgent } from "./reactAgent.js";
+export { executeObsidianMemory } from "./obsidianMemory.js";
 
 export {
   MockGeneratorAdapter,
@@ -32,6 +35,20 @@ export type {
 } from "./generator.js";
 
 /**
+ * Thin alias wrapper: injects a fixed `operation` value and delegates
+ * to the main executeObsidianMemory executor.
+ */
+function makeMemoryAlias(
+  operation: string,
+): (ctx: NodeExecutionContext, def: NodeDefinition) => Promise<NodeExecutionResult> {
+  return (ctx, def) =>
+    executeObsidianMemory(
+      { ...ctx, params: { ...ctx.params, operation } },
+      def,
+    );
+}
+
+/**
  * Register all built-in capability executors with the node executor.
  *
  * Call this once at worker/host startup after the node registry is
@@ -45,4 +62,11 @@ export function registerCapabilityExecutors(): void {
   nodeExecutor.registerCapability("ranking",       executeRanking);
   nodeExecutor.registerCapability("social-format", executeSocialFormat);
   nodeExecutor.registerCapability("export-bundle", executeExportBundle);
+
+  // Obsidian Memory — one canvas node type + four focused tool aliases
+  nodeExecutor.registerCapability("obsidian-memory", executeObsidianMemory);
+  nodeExecutor.registerCapability("memory-write",    makeMemoryAlias("write"));
+  nodeExecutor.registerCapability("memory-append",   makeMemoryAlias("append"));
+  nodeExecutor.registerCapability("memory-search",   makeMemoryAlias("search"));
+  nodeExecutor.registerCapability("memory-read",     makeMemoryAlias("read"));
 }
