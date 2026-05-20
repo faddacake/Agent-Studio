@@ -232,11 +232,22 @@ async function callTool(
     }
   }
 
+  const parentCredentials = {
+    apiKey:   context.params.apiKey   as string | undefined,
+    provider: context.params.provider as string | undefined,
+    model:    context.params.model    as string | undefined,
+  };
+  const currentDepth = Number(context.params.__agentDepth ?? 0);
+
   const syntheticCtx: NodeExecutionContext = {
     nodeId:    `${context.nodeId}--tool-${toolName}-${Date.now()}`,
     runId:     context.runId,
     inputs,
-    params,
+    params:    {
+      ...params,
+      __parentCredentials: parentCredentials,
+      __agentDepth:        currentDepth + 1,
+    },
     outputDir: context.outputDir,
     signal:    context.signal,
   };
@@ -357,6 +368,14 @@ export async function executeReactAgent(
   const apiKey    = (params.apiKey as string | undefined) ??
                     (params.__apiKey as string | undefined);
   const maxSteps  = Math.min(20, Math.max(1, Number(params.maxSteps ?? 10)));
+
+  const agentDepth = Number(params.__agentDepth ?? 0);
+  if (agentDepth > 2) {
+    throw new Error(
+      "Sub-agent nesting depth exceeded (max depth: 2). Avoid recursive agent chains.",
+    );
+  }
+
   const toolTypes = parseToolTypes(params.tools);
   const requireApproval = Boolean(params.requireApproval);
   const enableReflection = Boolean(params.reflection);
@@ -378,9 +397,12 @@ export async function executeReactAgent(
 
   // ── Seed the conversation ─────────────────────────────────────────────────
 
+  const rolePrefix = (params.__rolePrefix as string | undefined)?.trim() ?? "";
   const systemPrompt = buildSystemPrompt(toolDefs);
+  const fullSystemPrompt = rolePrefix ? `${rolePrefix}\n\n${systemPrompt}` : systemPrompt;
+
   const messages: LLMMessage[] = [
-    { role: "system",  content: systemPrompt },
+    { role: "system",  content: fullSystemPrompt },
     { role: "user",    content: `Goal: ${goal}` },
   ];
 

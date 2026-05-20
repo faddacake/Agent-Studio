@@ -5,6 +5,7 @@ import { executeRanking } from "./ranking.js";
 import { executeSocialFormat } from "./socialFormat.js";
 import { executeExportBundle } from "./exportBundle.js";
 import { executeReactAgent } from "./reactAgent.js";
+import { executeSubAgent } from "./subAgent.js";
 import { executeObsidianMemory } from "./obsidianMemory.js";
 import { executeWebSearch } from "./webSearch.js";
 import type { NodeDefinition, NodeExecutionContext, NodeExecutionResult } from "@aistudio/shared";
@@ -15,6 +16,7 @@ export { executeRanking } from "./ranking.js";
 export { executeSocialFormat } from "./socialFormat.js";
 export { executeExportBundle } from "./exportBundle.js";
 export { executeReactAgent } from "./reactAgent.js";
+export { executeSubAgent } from "./subAgent.js";
 export { executeObsidianMemory } from "./obsidianMemory.js";
 export { executeWebSearch } from "./webSearch.js";
 
@@ -59,6 +61,7 @@ function makeMemoryAlias(
  */
 export function registerCapabilityExecutors(): void {
   nodeExecutor.registerCapability("react-agent",   executeReactAgent);
+  nodeExecutor.registerCapability("sub-agent",     executeSubAgent);
   nodeExecutor.registerCapability("best-of-n",     executeBestOfN);
   nodeExecutor.registerCapability("clip-scoring",  executeClipScoring);
   nodeExecutor.registerCapability("ranking",       executeRanking);

@@ -46,6 +46,7 @@ export type { LLMMessage, LLMChatOptions, LLMTextClient, LLMErrorKind } from "./
 export {
   registerCapabilityExecutors,
   executeReactAgent,
+  executeSubAgent,
   executeObsidianMemory,
   executeWebSearch,
   executeBestOfN,
