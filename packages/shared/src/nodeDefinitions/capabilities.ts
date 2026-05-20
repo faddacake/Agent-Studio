@@ -583,13 +583,30 @@ export const reactAgentNode: NodeDefinition = {
       defaultValue: [],
       description: "Array of node type strings the agent can use as tools, e.g. [\"prompt-template\"]. Empty = no tools (reasoning only).",
     },
+    {
+      key: "reflection",
+      label: "Enable Reflection",
+      type: "boolean",
+      defaultValue: false,
+      description: "After the final answer, run up to reflectionRounds self-critique cycles to improve the output.",
+    },
+    {
+      key: "reflectionRounds",
+      label: "Reflection Rounds",
+      type: "number",
+      min: 1,
+      max: 3,
+      step: 1,
+      defaultValue: 2,
+      description: "Maximum number of self-critique rounds (1–3). Only used when Reflection is enabled.",
+    },
   ],
 
   uiSchema: {
     groups: [
       { label: "Goal",     fields: ["goal"] },
       { label: "LLM",      fields: ["provider", "model", "apiKey"] },
-      { label: "Behavior", fields: ["maxSteps", "tools"] },
+      { label: "Behavior", fields: ["maxSteps", "tools", "reflection", "reflectionRounds"] },
     ],
   },
 

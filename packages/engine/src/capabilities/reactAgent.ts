@@ -101,6 +101,35 @@ Final Answer: <your complete, helpful answer to the user's goal>
 ${toolsSection}`;
 }
 
+// ── Reflection prompt ──────────────────────────────────────────────────────────
+
+export function buildReflectionPrompt(goal: string, answer: string, roundNum: number): string {
+  return `You are reviewing your own answer to a user's goal. This is reflection round ${roundNum}.
+
+## Original goal
+${goal}
+
+## Your current answer
+${answer}
+
+## Instructions
+Critically evaluate your answer. Check for:
+- Missing information the user would need
+- Factual errors or unsupported claims
+- Logical gaps in reasoning
+- Opportunities to be more helpful or specific
+
+Respond with ONE of:
+
+**If no improvement is needed:**
+Critique: <brief analysis confirming the answer is complete and correct>
+No Revision Needed
+
+**If the answer can be improved:**
+Critique: <specific gaps or errors you found>
+Revised Answer: <your complete improved answer — not a diff, write the full answer>`;
+}
+
 // ── Response parser ────────────────────────────────────────────────────────────
 
 interface ParsedResponse {
@@ -140,6 +169,31 @@ function parseReActResponse(text: string): ParsedResponse {
     action:      actionMatch?.[1]?.trim(),
     actionInput: actionInput ?? {},
   };
+}
+
+// ── Reflection response parser ─────────────────────────────────────────────────
+
+export interface ParsedReflection {
+  critique: string;
+  revisedAnswer?: string;
+  noRevisionNeeded: boolean;
+}
+
+export function parseReflectionResponse(text: string): ParsedReflection {
+  const critiqueMatch = text.match(/Critique:\s*([\s\S]*?)(?=\n(?:Revised Answer:|No Revision Needed)|$)/);
+  const critique = critiqueMatch?.[1]?.trim() ?? text.trim();
+
+  if (/No Revision Needed/i.test(text)) {
+    return { critique, noRevisionNeeded: true };
+  }
+
+  const revisedMatch = text.match(/Revised Answer:\s*([\s\S]*?)$/);
+  if (revisedMatch) {
+    return { critique, revisedAnswer: revisedMatch[1].trim(), noRevisionNeeded: false };
+  }
+
+  // Fallback: if no clear signal, treat as "no revision needed"
+  return { critique, noRevisionNeeded: true };
 }
 
 // ── Tool invocation ────────────────────────────────────────────────────────────
@@ -202,6 +256,64 @@ async function callTool(
   return JSON.stringify(result.outputs);
 }
 
+// ── Reflection loop ────────────────────────────────────────────────────────────
+
+/**
+ * Run self-critique reflection rounds after the initial ReAct answer.
+ * Mutates `steps` in place. Returns the (potentially improved) final answer.
+ */
+async function runReflectionLoop(
+  goal: string,
+  initialAnswer: string,
+  rounds: number,
+  llm: ReturnType<typeof createLLMClient>,
+  steps: AgentStep[],
+  context: NodeExecutionContext,
+): Promise<string> {
+  let currentAnswer = initialAnswer;
+  const baseIndex = steps.length;
+
+  for (let r = 0; r < rounds; r++) {
+    if (context.signal?.aborted) break;
+
+    const reflectionPrompt = buildReflectionPrompt(goal, currentAnswer, r + 1);
+    let response: string;
+    try {
+      response = await llm.chat(
+        [
+          { role: "system", content: reflectionPrompt },
+          { role: "user",   content: "Please evaluate and optionally revise your answer." },
+        ],
+        { maxTokens: 1024, temperature: 0.3, signal: context.signal },
+      );
+    } catch {
+      // Non-fatal: stop reflection on LLM error, keep current answer
+      break;
+    }
+
+    const parsed = parseReflectionResponse(response);
+
+    const step: AgentStep = {
+      index:        baseIndex + r,
+      thought:      parsed.critique,
+      isFinal:      false,
+      isReflection: true,
+      answer:       parsed.revisedAnswer,
+      timestamp:    Date.now(),
+    };
+    steps.push(step);
+    context.onAgentStep?.(step);
+
+    if (parsed.noRevisionNeeded || !parsed.revisedAnswer) {
+      break; // Answer is satisfactory — stop early
+    }
+
+    currentAnswer = parsed.revisedAnswer;
+  }
+
+  return currentAnswer;
+}
+
 // ── Main executor ──────────────────────────────────────────────────────────────
 
 /** Parse the `tools` param into an array of node type strings */
@@ -242,6 +354,8 @@ export async function executeReactAgent(
                     (params.__apiKey as string | undefined);
   const maxSteps  = Math.min(20, Math.max(1, Number(params.maxSteps ?? 10)));
   const toolTypes = parseToolTypes(params.tools);
+  const enableReflection = Boolean(params.reflection);
+  const reflectionRounds = Math.min(3, Math.max(1, Number(params.reflectionRounds ?? 2)));
 
   // Validate API key early (Ollama is exempt)
   if (!apiKey && provider !== "ollama") {
@@ -363,6 +477,13 @@ export async function executeReactAgent(
       steps.length > 0
         ? `Agent reached the step limit (${maxSteps}) without a final answer. Last thought: ${steps[steps.length - 1].thought}`
         : `Agent produced no output.`;
+  }
+
+  // ── Optional reflection loop ──────────────────────────────────────────────
+  if (enableReflection && finalAnswer) {
+    finalAnswer = await runReflectionLoop(
+      goal, finalAnswer, reflectionRounds, llm, steps, context,
+    );
   }
 
   return {

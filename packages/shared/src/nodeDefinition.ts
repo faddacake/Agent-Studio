@@ -149,6 +149,8 @@ export interface AgentStep {
   isFinal: boolean;
   /** Final answer text, set only when isFinal is true */
   answer?: string;
+  /** True if this step is a self-critique reflection round (not a normal reasoning step) */
+  isReflection?: boolean;
   /** Unix timestamp (ms) when this step was emitted */
   timestamp: number;
 }
