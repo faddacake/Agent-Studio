@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 const NAV_ITEMS = [
   { label: "Get Started", href: "/getting-started", icon: RocketIcon },
   { label: "Workflows", href: "/workflows", icon: WorkflowIcon },
-  { label: "Video Projects", href: "/editor", icon: VideoProjectsIcon },
+  { label: "Video Projects", href: "/video-projects", icon: VideoProjectsIcon },
   { label: "Generate", href: "/generate", icon: GenerateIcon },
   { label: "Prompt", href: "/prompt", icon: PromptIcon },
   { label: "Settings", href: "/settings", icon: SettingsIcon },
