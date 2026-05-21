@@ -22,6 +22,7 @@ import {
   applyEdgeChanges,
   addEdge,
 } from "@xyflow/react";
+import { nodeRegistry, toWorkflowPorts } from "@aistudio/shared";
 
 // ── React Flow ↔ WorkflowNode adapters ──
 
@@ -306,9 +307,25 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
   },
 
   loadWorkflow: (meta, graph, replayRunId = null) => {
+    // Enrich any nodes that are missing port data (e.g. template-created workflows
+    // whose nodes were saved before ports were stored). Looks up each node type in
+    // the NodeRegistry and fills in inputs/outputs so React Flow handles render.
+    const enriched = graph.nodes.map((wn) => {
+      if ((wn.inputs?.length ?? 0) === 0 && (wn.outputs?.length ?? 0) === 0) {
+        const def = nodeRegistry.get(wn.type);
+        if (def) {
+          return {
+            ...wn,
+            inputs:  toWorkflowPorts(def.inputs,  "input"),
+            outputs: toWorkflowPorts(def.outputs, "output"),
+          };
+        }
+      }
+      return wn;
+    });
     set({
       meta,
-      nodes: graph.nodes.map(toFlowNode),
+      nodes: enriched.map(toFlowNode),
       edges: graph.edges.map(toFlowEdge),
       selectedNodeId: null,
       replayRunId: replayRunId ?? null,

@@ -6,7 +6,7 @@ import { CTAButton } from "@/components/marketing/CTAButton";
 import { Container } from "@/components/marketing/Container";
 
 export const metadata: Metadata = {
-  title: "Features — AI Studio",
+  title: "Features",
   description:
     "Visual workflow canvas, multi-model comparison, cost controls, encrypted storage, and more. Everything you need to build AI content pipelines locally.",
 };

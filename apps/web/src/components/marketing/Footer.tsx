@@ -53,7 +53,7 @@ export function Footer() {
                 letterSpacing: "-0.02em",
               }}
             >
-              AI Studio
+              Itera Studio
             </span>
             <p
               style={{
@@ -108,7 +108,7 @@ export function Footer() {
             color: "var(--color-text-muted)",
           }}
         >
-          &copy; {new Date().getFullYear()} AI Studio. All rights reserved.
+          &copy; {new Date().getFullYear()} Itera Studio. All rights reserved.
         </div>
       </Container>
     </footer>

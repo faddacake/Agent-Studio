@@ -105,7 +105,7 @@ function buildSentences(caption: string, topic: string): string[] {
     sentences.push(
       `Bringing ${topic} to life with AI.`,
       "The future of content creation is here.",
-      "Made with AI Studio.",
+      "Made with Itera Studio.",
     );
   }
 
@@ -193,7 +193,7 @@ function buildYouTubeShorts(caption: string, topic: string): YouTubeShortsVarian
     "",
     ...sentences.slice(1, 3),
     "",
-    "Made with AI Studio - the ultimate multi-model content creation platform.",
+    "Made with Itera Studio - the ultimate multi-model content creation platform.",
     "",
     hashtags.join(" "),
   ].join("\n");

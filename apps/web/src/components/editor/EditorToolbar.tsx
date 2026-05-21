@@ -93,16 +93,16 @@ export function EditorToolbar({
     >
       {/* Back link */}
       <Link
-        href="/workflows"
+        href="/video-projects"
         style={{
           fontSize: 13,
           color: "var(--color-text-muted)",
           textDecoration: "none",
           flexShrink: 0,
         }}
-        title="Back to Workflows"
+        title="Back to Video Projects"
       >
-        ← Workflows
+        ← Video Projects
       </Link>
 
       <span style={{ color: "var(--color-border)", flexShrink: 0 }}>/</span>

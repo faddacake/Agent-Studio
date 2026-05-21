@@ -58,7 +58,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 whiteSpace: "nowrap",
               }}
             >
-              AI Studio
+              Itera Studio
             </span>
           )}
           <button

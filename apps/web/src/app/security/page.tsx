@@ -5,8 +5,8 @@ import { Section, SectionHeader } from "@/components/marketing/Section";
 import { FeatureGrid, FeatureCard } from "@/components/marketing/FeatureGrid";
 
 export const metadata: Metadata = {
-  title: "Security — AI Studio",
-  description: "How AI Studio protects your data: local-first architecture, AES-256-GCM encryption, offline license validation, and zero telemetry.",
+  title: "Security",
+  description: "How Itera Studio protects your data: local-first architecture, AES-256-GCM encryption, offline license validation, and zero telemetry.",
 };
 
 export default function SecurityPage() {
@@ -19,7 +19,7 @@ export default function SecurityPage() {
               Security by design
             </h1>
             <p style={{ fontSize: 18, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
-              AI Studio runs on your hardware. Your data never touches our servers. Here&apos;s how we keep it safe.
+              Itera Studio runs on your hardware. Your data never touches our servers. Here&apos;s how we keep it safe.
             </p>
           </div>
         </Container>
@@ -31,7 +31,7 @@ export default function SecurityPage() {
           <FeatureCard
             icon={<ServerIcon />}
             title="Self-Hosted Only"
-            description="AI Studio runs entirely inside your Docker environment. There is no cloud service, no hosted option, and no data collection. The only network traffic is API calls you configure to AI providers."
+            description="Itera Studio runs entirely inside your Docker environment. There is no cloud service, no hosted option, and no data collection. The only network traffic is API calls you configure to AI providers."
           />
           <FeatureCard
             icon={<DbIcon />}
@@ -71,7 +71,7 @@ export default function SecurityPage() {
       </Section>
 
       <Section background="secondary">
-        <SectionHeader title="Threat model" subtitle="What AI Studio protects against — and what it doesn't." />
+        <SectionHeader title="Threat model" subtitle="What Itera Studio protects against — and what it doesn't." />
         <div style={{ maxWidth: 640, marginLeft: "auto", marginRight: "auto" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
             <div>

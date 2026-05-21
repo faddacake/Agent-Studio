@@ -89,7 +89,7 @@ export default function GettingStartedPage() {
         Getting Started
       </h1>
       <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 32 }}>
-        Complete these steps to start generating content with AI Studio.
+        Complete these steps to start generating content with Itera Studio.
       </p>
 
       {/* Progress bar */}

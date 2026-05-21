@@ -1490,7 +1490,12 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
           </div>
 
           {/* ── Row 2: editing tools ── */}
-          <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden">
+          {/* Outer wrapper — no overflow so the ⋯ dropdown can escape the clip boundary */}
+          <div className="flex min-w-0 items-center gap-2">
+            {/* Inner scrollable section — buttons scroll horizontally on narrow widths.
+                The ⋯ More button is a sibling of this div (not inside it) so its
+                absolute-positioned dropdown is not clipped by overflow-x-auto. */}
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={toggleTemplatePicker}
@@ -1555,8 +1560,10 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
               {saving ? "Saving…" : dirty ? (<>Save <span className="opacity-50">⌘S</span></>) : "Saved"}
             </button>
 
-            {/* ── ⋯ More: secondary editing actions in a compact dropdown ── */}
-            <div className="relative">
+            </div>{/* end inner scrollable section */}
+
+            {/* ── ⋯ More: lives outside overflow-x-auto so dropdown isn't clipped ── */}
+            <div className="relative flex-shrink-0">
               <button
                 ref={moreMenuBtnRef}
                 type="button"

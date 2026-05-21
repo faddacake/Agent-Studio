@@ -6,7 +6,7 @@ import { PricingCard } from "@/components/marketing/PricingCard";
 import { FAQ } from "@/components/marketing/FAQ";
 
 export const metadata: Metadata = {
-  title: "Pricing — Itera Studio",
+  title: "Pricing",
   description:
     "One-time license. All agentic features. No subscription. Run Itera Studio on your own hardware forever — Solo from $79, Pro from $149.",
 };
