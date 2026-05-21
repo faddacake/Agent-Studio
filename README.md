@@ -1,4 +1,4 @@
-# Itera Studio
+# Agent Studio
 
 A self-hosted AI workflow automation platform. Build, run, and schedule multi-step AI pipelines with a visual editor.
 
