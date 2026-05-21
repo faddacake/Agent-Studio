@@ -330,7 +330,7 @@ export function WelcomeScreen({ onCreateFromGraph, onOpenModal, onDismiss, creat
             letterSpacing: "-0.02em",
           }}
         >
-          Welcome to Itera Studio
+          Welcome to Agent Studio
         </h1>
         <p style={{ fontSize: 14, color: "var(--color-text-muted)", margin: 0 }}>
           Build&nbsp;·&nbsp;Generate&nbsp;·&nbsp;Edit&nbsp;·&nbsp;Export&nbsp;multimodal&nbsp;videos

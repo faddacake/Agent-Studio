@@ -1,6 +1,6 @@
 # Phase 3: Agentic Upgrade — Feature Summary
 
-> Five features added to Itera Studio's ReAct Agent system.  
+> Five features added to Agent Studio's ReAct Agent system.  
 > All features are backward compatible. Existing workflows are unaffected.
 
 ---

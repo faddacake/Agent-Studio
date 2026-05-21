@@ -139,7 +139,7 @@ async function searchDuckDuckGo(query: string, maxResults: number): Promise<WebS
     res = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; IteraStudio/1.0; web-search-node)",
+        "User-Agent": "Mozilla/5.0 (compatible; AgentStudio/1.0; web-search-node)",
         "Accept": "text/html",
       },
     });

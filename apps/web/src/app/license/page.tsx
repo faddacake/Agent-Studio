@@ -7,7 +7,7 @@ import { CTAButton } from "@/components/marketing/CTAButton";
 
 export const metadata: Metadata = {
   title: "License",
-  description: "How Itera Studio licensing works: offline Ed25519 token validation, no subscriptions, no phone-home.",
+  description: "How Agent Studio licensing works: offline Ed25519 token validation, no subscriptions, no phone-home.",
 };
 
 export default function LicensePage() {
@@ -20,7 +20,7 @@ export default function LicensePage() {
               How licensing works
             </h1>
             <p style={{ fontSize: 18, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
-              Itera Studio uses offline license tokens. No accounts, no subscriptions, no phone-home.
+              Agent Studio uses offline license tokens. No accounts, no subscriptions, no phone-home.
             </p>
           </div>
         </Container>
@@ -33,7 +33,7 @@ export default function LicensePage() {
             { title: "Purchase a license", description: "You buy a license key from the pricing page. It's a one-time purchase — no recurring fees." },
             { title: "Receive your key", description: "Your license key is a JWT (JSON Web Token) signed with Ed25519. It's delivered to your email after purchase." },
             { title: "Set the environment variable", description: "Add LICENSE_KEY=your-key to your .env file or Docker environment. That's the only setup needed." },
-            { title: "Validation happens locally", description: "When Itera Studio starts, it verifies the Ed25519 signature using a public key bundled in the app. No internet required." },
+            { title: "Validation happens locally", description: "When Agent Studio starts, it verifies the Ed25519 signature using a public key bundled in the app. No internet required." },
           ]} />
         </div>
       </Section>

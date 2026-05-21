@@ -3,7 +3,7 @@
     "id": "video-creation-starters",
     "name": "Video Creation Starters",
     "version": "1.0.0",
-    "author": "Itera Studio",
+    "author": "Agent Studio",
     "description": "Three ready-to-run starting points for the core multimodal loop: generate images, animate them, and export.",
     "category": "video-creation",
     "tags": ["video", "image", "starter", "social", "reel", "story"],

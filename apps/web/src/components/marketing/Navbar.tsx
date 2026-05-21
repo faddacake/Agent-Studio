@@ -47,7 +47,7 @@ export function Navbar() {
               letterSpacing: "-0.02em",
             }}
           >
-            Itera Studio
+            Agent Studio
           </Link>
 
           {/* Desktop nav */}

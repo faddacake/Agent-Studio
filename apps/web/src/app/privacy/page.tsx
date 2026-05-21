@@ -4,7 +4,7 @@ import { Container } from "@/components/marketing/Container";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "Itera Studio privacy policy. Self-hosted software with zero data collection.",
+  description: "Agent Studio privacy policy. Self-hosted software with zero data collection.",
 };
 
 export default function PrivacyPage() {
@@ -21,15 +21,15 @@ export default function PrivacyPage() {
             </p>
 
             <LegalSection title="Overview">
-              Itera Studio is self-hosted software that runs entirely on your hardware. We do not operate
-              any cloud service, do not collect usage data, and do not have access to your Itera Studio instance.
+              Agent Studio is self-hosted software that runs entirely on your hardware. We do not operate
+              any cloud service, do not collect usage data, and do not have access to your Agent Studio instance.
             </LegalSection>
 
             <LegalSection title="Data we collect">
               <strong>From the marketing website (this site):</strong> Standard web server logs (IP address,
               pages visited, browser info). No third-party analytics or tracking scripts.
               <br /><br />
-              <strong>From the Itera Studio application:</strong> Nothing. The application runs on your
+              <strong>From the Agent Studio application:</strong> Nothing. The application runs on your
               infrastructure. We have no access to your workflows, API keys, generated assets, or any other data.
             </LegalSection>
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
             </LegalSection>
 
             <LegalSection title="Third-party services">
-              The Itera Studio application connects only to AI provider APIs (Replicate, Fal, etc.) that you
+              The Agent Studio application connects only to AI provider APIs (Replicate, Fal, etc.) that you
               explicitly configure. We have no control over how these providers handle data sent to their APIs.
               Review each provider&apos;s privacy policy before connecting.
             </LegalSection>

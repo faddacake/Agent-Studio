@@ -333,7 +333,7 @@ export default function SettingsPage() {
       {/* About */}
       <Section title="About">
         <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.8 }}>
-          <p><strong style={{ color: "var(--color-text-primary)" }}>Itera Studio</strong></p>
+          <p><strong style={{ color: "var(--color-text-primary)" }}>Agent Studio</strong></p>
           <p>Self-hosted AI workflow builder</p>
         </div>
       </Section>

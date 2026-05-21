@@ -377,7 +377,7 @@ The `./memory` directory is created automatically by Docker Compose if it doesn'
 3. Wire a text literal → `content_in`
 
 **Write test:**
-- Set `operation: write`, `title: "Test Note"`, content: `"Hello from Itera Studio"`
+- Set `operation: write`, `title: "Test Note"`, content: `"Hello from Agent Studio"`
 - Run → check `./memory/notes/test-note.md` exists on host
 - Verify `_memory_index.json` contains the entry
 

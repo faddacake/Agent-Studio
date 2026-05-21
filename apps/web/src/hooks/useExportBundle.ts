@@ -18,7 +18,7 @@ export interface ExportInput {
   editedVariants?: unknown;
 }
 
-const WATERMARK_TEXT = "Made with Itera Studio — Free Tier";
+const WATERMARK_TEXT = "Made with Agent Studio — Free Tier";
 
 async function fetchImageAsBytes(url: string): Promise<Uint8Array> {
   const res = await fetch(url);

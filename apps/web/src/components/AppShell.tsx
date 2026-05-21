@@ -58,7 +58,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                 whiteSpace: "nowrap",
               }}
             >
-              Itera Studio
+              Agent Studio
             </span>
           )}
           <button

@@ -4,7 +4,7 @@ import { Container } from "@/components/marketing/Container";
 
 export const metadata: Metadata = {
   title: "Documentation",
-  description: "Install Itera Studio with Docker, set your license key, connect providers, and run your first workflow.",
+  description: "Install Agent Studio with Docker, set your license key, connect providers, and run your first workflow.",
 };
 
 export default function DocsPage() {
@@ -17,7 +17,7 @@ export default function DocsPage() {
               Documentation
             </h1>
             <p style={{ fontSize: 17, color: "var(--color-text-secondary)", marginBottom: 48, lineHeight: 1.6 }}>
-              Get Itera Studio running in under 10 minutes.
+              Get Agent Studio running in under 10 minutes.
             </p>
 
             <DocSection id="requirements" title="Requirements">
@@ -25,7 +25,7 @@ export default function DocsPage() {
                 <li>Docker &amp; Docker Compose v2+</li>
                 <li>At least 1 GB free RAM</li>
                 <li>An API key for at least one AI provider (Replicate, Fal)</li>
-                <li>A valid Itera Studio license key</li>
+                <li>A valid Agent Studio license key</li>
               </ul>
             </DocSection>
 
@@ -75,7 +75,7 @@ APP_PORT=3001`}</CodeBlock>
               </p>
             </DocSection>
 
-            <DocSection id="start" title="3. Start Itera Studio">
+            <DocSection id="start" title="3. Start Agent Studio">
               <CodeBlock>docker compose up -d</CodeBlock>
               <p style={paraStyle}>
                 Wait for the health check to pass (about 30 seconds), then visit{" "}

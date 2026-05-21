@@ -7,7 +7,7 @@
 
 ## Goal
 
-Add a ReAct (Reasoning + Acting) Agent node to Itera Studio as the first step in turning the platform into a visual agentic workflow builder. The agent node lets users drop an autonomous LLM agent onto the canvas, give it a goal and a set of tools (canvas nodes), and watch it reason live through Thought/Action/Observation cycles until it reaches a final answer.
+Add a ReAct (Reasoning + Acting) Agent node to Agent Studio as the first step in turning the platform into a visual agentic workflow builder. The agent node lets users drop an autonomous LLM agent onto the canvas, give it a goal and a set of tools (canvas nodes), and watch it reason live through Thought/Action/Observation cycles until it reaches a final answer.
 
 ---
 

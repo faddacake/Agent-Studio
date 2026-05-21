@@ -231,7 +231,7 @@ function buildSchedulerCSV(variants: PlatformVariants): string {
 // ── Watermark text ──
 
 export function getWatermarkText(tier: LicenseTier): string | null {
-  if (tier === "free") return "Made with Itera Studio — Free Tier";
+  if (tier === "free") return "Made with Agent Studio — Free Tier";
   return null;
 }
 

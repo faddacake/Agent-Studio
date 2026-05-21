@@ -1,6 +1,6 @@
-# Itera Studio — Agentic Upgrade
+# Agent Studio — Agentic Upgrade
 
-Tracks the phased rollout of autonomous agent capabilities on the Itera Studio canvas.
+Tracks the phased rollout of autonomous agent capabilities on the Agent Studio canvas.
 
 ---
 

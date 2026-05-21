@@ -3,16 +3,16 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "Itera Studio — Self-Hosted AI Workflow Builder",
-    template: "%s — Itera Studio",
+    default: "Agent Studio — Self-Hosted AI Workflow Builder",
+    template: "%s — Agent Studio",
   },
   description:
     "Build AI workflows, run multi-model comparisons, control costs, and generate assets locally. Self-hosted, privacy-first, Docker-ready.",
   openGraph: {
-    title: "Itera Studio — Self-Hosted AI Workflow Builder",
+    title: "Agent Studio — Self-Hosted AI Workflow Builder",
     description:
       "Build AI workflows, run multi-model comparisons, control costs, and generate assets locally.",
-    siteName: "Itera Studio",
+    siteName: "Agent Studio",
     type: "website",
   },
   robots: { index: true, follow: true },

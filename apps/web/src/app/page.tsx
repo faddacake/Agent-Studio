@@ -8,11 +8,11 @@ import { Steps } from "@/components/marketing/Steps";
 import { FAQ } from "@/components/marketing/FAQ";
 
 export const metadata: Metadata = {
-  title: "Itera Studio — Your AI Agency, On Your Hardware",
+  title: "Agent Studio — Your AI Agency, On Your Hardware",
   description:
     "Multi-agent reasoning, persistent memory, web search, and video output — self-hosted in one Docker container with your own API keys. Lifetime license, no subscription.",
   openGraph: {
-    title: "Itera Studio — Your AI Agency, On Your Hardware",
+    title: "Agent Studio — Your AI Agency, On Your Hardware",
     description:
       "Chain reasoning agents, give them persistent memory, let them search the web and collaborate as teams — then output to video. Self-hosted. One-time license.",
     type: "website",
@@ -191,7 +191,7 @@ export default function LandingPage() {
       <Section background="secondary">
         <SectionHeader
           title="From reasoning to finished output"
-          subtitle="Itera Studio isn't just an agent platform — it generates, edits, and exports professional creative assets."
+          subtitle="Agent Studio isn't just an agent platform — it generates, edits, and exports professional creative assets."
         />
         <FeatureGrid>
           <FeatureCard
@@ -270,7 +270,7 @@ export default function LandingPage() {
       <Section background="secondary">
         <SectionHeader
           title="Replace your entire AI stack"
-          subtitle="Itera Studio does the job of five fragmented SaaS tools — for a one-time fee, on your machine."
+          subtitle="Agent Studio does the job of five fragmented SaaS tools — for a one-time fee, on your machine."
         />
         <div
           style={{
@@ -354,7 +354,7 @@ export default function LandingPage() {
                 }}
               >
                 <span style={{ color: "var(--color-accent)", fontWeight: 600 }}>
-                  Itera Studio:{" "}
+                  Agent Studio:{" "}
                 </span>
                 {withItera}
               </div>
@@ -373,7 +373,7 @@ export default function LandingPage() {
           <span style={{ color: "#f87171", fontWeight: 700 }}>$61–313 / month</span>
           &nbsp;&nbsp;vs.&nbsp;&nbsp;
           <span style={{ color: "var(--color-accent)", fontWeight: 700 }}>
-            Itera Studio: $79 once.
+            Agent Studio: $79 once.
           </span>
         </div>
       </Section>
@@ -382,7 +382,7 @@ export default function LandingPage() {
       <Section>
         <SectionHeader
           title="What you can build"
-          subtitle="Itera Studio handles the orchestration — you define the goal, agents and tools do the rest."
+          subtitle="Agent Studio handles the orchestration — you define the goal, agents and tools do the rest."
         />
         <div
           style={{
@@ -504,7 +504,7 @@ export default function LandingPage() {
               {
                 question: "What makes this different from LangFlow or n8n?",
                 answer:
-                  "Itera Studio is purpose-built for agentic AI — not generic workflow automation. You get ReAct reasoning loops, sub-agent teams, a persistent Obsidian memory vault, built-in web search, self-critique, and a video editor, all in one visual canvas. LangFlow and n8n require assembling those capabilities from separate tools.",
+                  "Agent Studio is purpose-built for agentic AI — not generic workflow automation. You get ReAct reasoning loops, sub-agent teams, a persistent Obsidian memory vault, built-in web search, self-critique, and a video editor, all in one visual canvas. LangFlow and n8n require assembling those capabilities from separate tools.",
               },
               {
                 question: "Do I need a server to run it?",
@@ -519,7 +519,7 @@ export default function LandingPage() {
               {
                 question: "Is this a subscription?",
                 answer:
-                  "No. You pay once and own the license. There are no recurring charges from Itera Studio. You only pay AI providers (OpenAI, Replicate, etc.) for the API calls your workflows make.",
+                  "No. You pay once and own the license. There are no recurring charges from Agent Studio. You only pay AI providers (OpenAI, Replicate, etc.) for the API calls your workflows make.",
               },
               {
                 question: "What is the Obsidian memory vault?",
@@ -539,7 +539,7 @@ export default function LandingPage() {
               {
                 question: "Do you offer refunds?",
                 answer:
-                  "Yes. If Itera Studio doesn't work for your use case, contact us within 14 days of purchase for a full refund — no questions asked.",
+                  "Yes. If Agent Studio doesn't work for your use case, contact us within 14 days of purchase for a full refund — no questions asked.",
               },
             ]}
           />

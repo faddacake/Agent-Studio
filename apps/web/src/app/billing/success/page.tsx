@@ -6,7 +6,7 @@ import { CopyBlock } from "./CopyBlock";
 
 export const metadata: Metadata = {
   title: "Purchase Complete",
-  description: "Your Itera Studio license purchase was successful. Follow these steps to get started.",
+  description: "Your Agent Studio license purchase was successful. Follow these steps to get started.",
 };
 
 export default function BillingSuccessPage() {
@@ -52,7 +52,7 @@ export default function BillingSuccessPage() {
               </h1>
               <p style={{ fontSize: 16, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
                 Your license key will be delivered to your email shortly.
-                Follow the steps below to get Itera Studio running.
+                Follow the steps below to get Agent Studio running.
               </p>
             </div>
 
@@ -73,7 +73,7 @@ export default function BillingSuccessPage() {
                 <CopyBlock code="LICENSE_KEY=your-license-key-here" />
               </StepCard>
 
-              <StepCard step={3} title="Start Itera Studio">
+              <StepCard step={3} title="Start Agent Studio">
                 <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.6, marginBottom: 12 }}>
                   Run the following command to start the app and Redis:
                 </p>

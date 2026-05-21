@@ -1,9 +1,9 @@
 /**
- * Template Pack types and loader for Itera Studio.
+ * Template Pack types and loader for Agent Studio.
  *
  * Template packs are bundles of pre-built workflow templates that can be
  * installed without a hosted marketplace. Supported sources:
- * - builtin: shipped with Itera Studio
+ * - builtin: shipped with Agent Studio
  * - user: created by the current user
  * - imported: loaded from a JSON file or URL
  * - premium: gated by license tier (future)

@@ -3,7 +3,7 @@
     "id": "image-gen-starter",
     "name": "Image Gen Starter",
     "version": "1.0.0",
-    "author": "Itera Studio",
+    "author": "Agent Studio",
     "description": "A minimal two-node starting point: type a prompt and generate an image.",
     "category": "getting-started",
     "tags": ["starter", "image", "beginner", "prompt"],

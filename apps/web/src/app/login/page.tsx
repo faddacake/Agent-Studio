@@ -81,7 +81,7 @@ export default function LoginPage() {
               marginBottom: 6,
             }}
           >
-            Itera Studio
+            Agent Studio
           </h1>
           <p style={{ fontSize: 14, color: "var(--color-text-muted)" }}>
             Sign in to your local instance

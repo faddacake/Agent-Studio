@@ -4,7 +4,7 @@ import { Container } from "@/components/marketing/Container";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Itera Studio terms of service for license purchase and software usage.",
+  description: "Agent Studio terms of service for license purchase and software usage.",
 };
 
 export default function TermsPage() {
@@ -21,19 +21,19 @@ export default function TermsPage() {
             </p>
 
             <LegalSection title="License grant">
-              Upon purchase, you receive a non-exclusive, non-transferable license to use Itera Studio on one
+              Upon purchase, you receive a non-exclusive, non-transferable license to use Agent Studio on one
               instance (Personal) or the number of seats specified (Team). The license is perpetual for the
               purchased major version.
             </LegalSection>
 
             <LegalSection title="Permitted use">
-              You may install Itera Studio on any hardware you control — personal computers, private servers,
+              You may install Agent Studio on any hardware you control — personal computers, private servers,
               or cloud VMs. You may use it for commercial and non-commercial purposes. You may not redistribute,
               sublicense, or resell the software or license keys.
             </LegalSection>
 
             <LegalSection title="AI provider usage">
-              Itera Studio connects to third-party AI providers using API keys you supply. You are responsible
+              Agent Studio connects to third-party AI providers using API keys you supply. You are responsible
               for compliance with each provider&apos;s terms of service and any costs incurred through their APIs.
             </LegalSection>
 
@@ -43,7 +43,7 @@ export default function TermsPage() {
             </LegalSection>
 
             <LegalSection title="Disclaimer">
-              Itera Studio is provided &quot;as is&quot; without warranty of any kind. We are not responsible for
+              Agent Studio is provided &quot;as is&quot; without warranty of any kind. We are not responsible for
               costs incurred through AI provider APIs, generated content, or any damages arising from use
               of the software.
             </LegalSection>

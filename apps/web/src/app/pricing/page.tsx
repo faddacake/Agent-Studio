@@ -8,7 +8,7 @@ import { FAQ } from "@/components/marketing/FAQ";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "One-time license. All agentic features. No subscription. Run Itera Studio on your own hardware forever — Solo from $79, Pro from $149.",
+    "One-time license. All agentic features. No subscription. Run Agent Studio on your own hardware forever — Solo from $79, Pro from $149.",
 };
 
 export default function PricingPage() {
@@ -274,7 +274,7 @@ export default function PricingPage() {
                 }}
               >
                 <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)" }}>
-                  Itera Studio Solo (all of the above)
+                  Agent Studio Solo (all of the above)
                 </span>
                 <span style={{ fontSize: 16, fontWeight: 800, color: "var(--color-accent)" }}>
                   $79 once
@@ -307,12 +307,12 @@ export default function PricingPage() {
                 {
                   question: "Is this a subscription?",
                   answer:
-                    "No. You pay once and get a license key. There are no recurring charges from Itera Studio. You only pay AI providers (OpenAI, Anthropic, Replicate, etc.) directly for the API calls your workflows make.",
+                    "No. You pay once and get a license key. There are no recurring charges from Agent Studio. You only pay AI providers (OpenAI, Anthropic, Replicate, etc.) directly for the API calls your workflows make.",
                 },
                 {
                   question: "What is the difference between Solo and Pro?",
                   answer:
-                    "Solo allows one simultaneous instance on any machine. Pro allows up to 3 simultaneous instances — useful if you run Itera Studio on your laptop, a home server, and a production VM. Pro also extends version support to 2 years of major updates and includes priority support.",
+                    "Solo allows one simultaneous instance on any machine. Pro allows up to 3 simultaneous instances — useful if you run Agent Studio on your laptop, a home server, and a production VM. Pro also extends version support to 2 years of major updates and includes priority support.",
                 },
                 {
                   question: "Are all agentic features included in the Solo license?",
@@ -342,7 +342,7 @@ export default function PricingPage() {
                 {
                   question: "Do you offer refunds?",
                   answer:
-                    "Yes. If Itera Studio doesn't work for your use case, contact us within 14 days of purchase for a full refund — no questions asked.",
+                    "Yes. If Agent Studio doesn't work for your use case, contact us within 14 days of purchase for a full refund — no questions asked.",
                 },
               ]}
             />

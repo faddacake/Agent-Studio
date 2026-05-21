@@ -73,7 +73,7 @@ export default function SetupPage() {
               marginBottom: 6,
             }}
           >
-            Welcome to Itera Studio
+            Welcome to Agent Studio
           </h1>
           <p style={{ fontSize: 14, color: "var(--color-text-muted)", lineHeight: 1.5 }}>
             Create a password to secure your local instance. This is the only account — there are no usernames or email signups.
