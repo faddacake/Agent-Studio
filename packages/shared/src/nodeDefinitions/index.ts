@@ -31,7 +31,7 @@ export {
 } from "./capabilities.js";
 
 /**
- * All built-in node definitions shipped with AI Studio.
+ * All built-in node definitions shipped with Agent Studio.
  */
 export const builtInNodeDefinitions = [
   ...ioNodes,

@@ -210,7 +210,7 @@ export interface NodeExecutionResult {
 /**
  * The core type that fully describes a node's identity, capabilities,
  * ports, parameters, and runtime behavior. Every executable capability
- * in AI Studio is represented as a NodeDefinition.
+ * in Agent Studio is represented as a NodeDefinition.
  */
 export interface NodeDefinition {
   /** Unique type identifier (e.g. "image-generation", "resize", "clip-scoring") */

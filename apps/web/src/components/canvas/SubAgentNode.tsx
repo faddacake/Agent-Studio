@@ -12,10 +12,12 @@
  */
 
 import { memo } from "react";
+import Link from "next/link";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { Port } from "@aistudio/shared";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useShallow } from "zustand/react/shallow";
+import { isMissingKeyError } from "@/lib/missingKeyError";
 
 // ── Port colours (shared with other node types) ──────────────────────────────
 
@@ -52,12 +54,13 @@ function SubAgentNodeComponent({ id, data, selected }: NodeProps) {
   const role    = (params.role  as string | undefined)?.trim() ?? "";
   const depth   = Number(params.__agentDepth ?? 0);
 
-  // Pull run status from debug snapshot; pull last result from latestOutputsByNode
-  const { runStatus, lastResult } = useWorkflowStore(useShallow((state) => {
+  // Pull run status + error from debug snapshot; pull last result from latestOutputsByNode
+  const { runStatus, runError, lastResult } = useWorkflowStore(useShallow((state) => {
     const debugNode = state.debugSnapshot?.nodes.find((n) => n.nodeId === id);
     const latest = state.latestOutputsByNode?.[id];
     return {
       runStatus:  debugNode?.status ?? null,
+      runError:   debugNode?.error ?? null,
       lastResult: latest?.textSnippet?.split("\n")[0].slice(0, 80) ?? latest?.summary?.slice(0, 80) ?? null,
     };
   }));
@@ -135,6 +138,30 @@ function SubAgentNodeComponent({ id, data, selected }: NodeProps) {
       {isRunning && (
         <div className="border-t border-neutral-800 px-3 py-1.5">
           <p className="text-[10px] text-indigo-400 animate-pulse">Working…</p>
+        </div>
+      )}
+
+      {/* Error strip — key-related failures show actionable badge; other failures
+          show the raw message (mirrors AgentNode pattern). */}
+      {isFailed && (
+        <div className="border-t border-red-900/40 bg-red-950/30 px-3 py-1.5">
+          {isMissingKeyError(runError) ? (
+            <p className="flex flex-wrap items-center gap-x-1 text-[10px] leading-tight text-red-300">
+              <span aria-hidden="true">⚠</span>
+              <span>No API Key —</span>
+              <Link
+                href="/settings/providers"
+                className="underline underline-offset-2 transition-colors hover:text-red-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Settings → Providers
+              </Link>
+            </p>
+          ) : (
+            <p className="line-clamp-2 text-[10px] leading-tight text-red-300">
+              {runError ?? "Sub-agent failed"}
+            </p>
+          )}
         </div>
       )}
 

@@ -10,7 +10,7 @@ export function createBackup(dbPath: string): string | null {
 
   const dir = path.dirname(dbPath);
   const timestamp = new Date().toISOString().replace(/[:.]/g, "").slice(0, 15);
-  const backupPath = path.join(dir, `aistudio.db.bak.${timestamp}`);
+  const backupPath = path.join(dir, `agentstudio.db.bak.${timestamp}`);
 
   fs.copyFileSync(dbPath, backupPath);
   console.log(`[db] Backup created: ${backupPath}`);
@@ -18,7 +18,7 @@ export function createBackup(dbPath: string): string | null {
   // Prune old backups, keep only MAX_BACKUPS most recent
   const backups = fs
     .readdirSync(dir)
-    .filter((f) => f.startsWith("aistudio.db.bak."))
+    .filter((f) => f.startsWith("agentstudio.db.bak."))
     .sort()
     .reverse();
 

@@ -84,6 +84,42 @@ function formatRunTime(iso: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+// ── Provider display names (banner) ──
+
+const PROVIDER_DISPLAY_NAMES: Record<string, string> = {
+  fal:        "Fal.ai",
+  replicate:  "Replicate",
+  google:     "Google AI",
+  openai:     "OpenAI",
+  anthropic:  "Anthropic",
+  grok:       "Grok (xAI)",
+  ollama:     "Ollama",
+  elevenlabs: "ElevenLabs",
+  stability:  "Stability AI",
+  midjourney: "Midjourney",
+  bedrock:    "AWS Bedrock",
+  azure:      "Azure OpenAI",
+};
+
+/**
+ * Scan node snapshot errors for a missing-provider-key message.
+ * Returns the provider id string if detected, null otherwise.
+ * Accepts unknown[] so it works with any typed node snapshot array.
+ */
+function extractMissingProvider(nodes: ReadonlyArray<unknown>): string | null {
+  for (const node of nodes) {
+    if (typeof node !== "object" || node === null) continue;
+    const err = (node as Record<string, unknown>).error;
+    if (typeof err !== "string" || !err) continue;
+    // Message from runs/route.ts: Provider "fal" is not configured. …
+    const match = err.match(/Provider "([^"]+)" is not configured/i);
+    if (match?.[1]) return match[1];
+    // Fallback: any "not configured" + "API key" phrasing
+    if (/not configured/i.test(err) && /api[\s-]?key/i.test(err)) return "the provider";
+  }
+  return null;
+}
+
 // ── Module-level constants ──
 
 const TERMINAL_BADGE: Record<string, { label: string; colorClass: string }> = {
@@ -183,6 +219,7 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   const scheduleBtnRef = useRef<HTMLButtonElement | null>(null);
   const [scheduleActive, setScheduleActive] = useState(false);
   const [emptyStateDismissed, setEmptyStateDismissed] = useState(false);
+  const [missingKeyBanner, setMissingKeyBanner] = useState<{ provider: string } | null>(null);
 
   // ── Schedule active state — drives indicator on Schedule button ──────────
   // Fetches once when the workflow loads; updated in real-time via SchedulePanel.
@@ -626,6 +663,17 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugSnapshot?.status]);
 
+  // Surface the missing-key banner when a run fails because a provider is not configured.
+  // Only fires on failed / partial_failure so normal errors don't trigger it.
+  useEffect(() => {
+    const status = debugSnapshot?.status;
+    if (status !== "failed" && status !== "partial_failure") return;
+    if (!debugSnapshot?.nodes?.length) return;
+    const provider = extractMissingProvider(debugSnapshot.nodes as ReadonlyArray<unknown>);
+    if (provider) setMissingKeyBanner({ provider });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debugSnapshot?.status]);
+
   // Clear persisted node run states, execution summaries, and the post-run FAB
   // when a new run starts so stale badges and buttons don't linger.
   useEffect(() => {
@@ -634,6 +682,8 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
     clearLatestExecutionByNode();
     setPostRunArtifacts([]);
     setSendingFromCanvas(false);
+    // Dismiss the missing-key banner so it doesn't persist across separate runs.
+    setMissingKeyBanner(null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debugSnapshot?.status]);
 
@@ -1112,24 +1162,67 @@ function CanvasInner({ initialArtifactPath, initialRunId, initialFragmentId }: {
 
       {/* Center: React Flow Canvas */}
       <div className="relative flex-1">
-        {/* Restore / Edit & Replay origin banner */}
-        {replayRunId && (
-          <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2" data-testid="replay-banner">
-            <div className="flex items-center gap-3 rounded-lg border border-amber-700/50 bg-amber-950/90 px-4 py-1.5 text-xs text-amber-300 shadow-lg backdrop-blur-sm">
-              <span>
-                Graph loaded from run{" "}
-                <code className="font-mono text-amber-200">{replayRunId.slice(0, 8)}</code>
-                {" "}— edit or run as new
-              </span>
-              <button
-                type="button"
-                onClick={() => setReplayRunId(null)}
-                className="text-amber-500 hover:text-amber-300"
-                aria-label="Dismiss replay banner"
+        {/* Canvas notification banners — stacked column, centred at top of canvas.
+            pointer-events-none on the container so the canvas stays interactive,
+            pointer-events-auto re-enabled on each individual banner. */}
+        {(replayRunId || missingKeyBanner) && (
+          <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 flex flex-col items-center gap-2 pointer-events-none">
+
+            {/* Restore / Edit & Replay origin banner */}
+            {replayRunId && (
+              <div
+                className="pointer-events-auto flex items-center gap-3 rounded-lg border border-amber-700/50 bg-amber-950/90 px-4 py-1.5 text-xs text-amber-300 shadow-lg backdrop-blur-sm"
+                data-testid="replay-banner"
               >
-                ✕
-              </button>
-            </div>
+                <span>
+                  Graph loaded from run{" "}
+                  <code className="font-mono text-amber-200">{replayRunId.slice(0, 8)}</code>
+                  {" "}— edit or run as new
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReplayRunId(null)}
+                  className="text-amber-500 hover:text-amber-300"
+                  aria-label="Dismiss replay banner"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Missing API key banner — shown when a run fails due to unconfigured provider */}
+            {missingKeyBanner && (
+              <div
+                className="pointer-events-auto flex items-center gap-3 rounded-lg border border-yellow-600/60 bg-yellow-950/90 px-4 py-1.5 text-xs text-yellow-100 shadow-lg backdrop-blur-sm"
+                data-testid="missing-key-banner"
+                role="alert"
+              >
+                <span aria-hidden="true" className="shrink-0 text-yellow-400">⚠</span>
+                <span>
+                  Missing API key for{" "}
+                  <span className="font-semibold text-yellow-50">
+                    {PROVIDER_DISPLAY_NAMES[missingKeyBanner.provider] ?? missingKeyBanner.provider}
+                  </span>
+                  .{" "}
+                  <Link
+                    href="/settings/providers"
+                    className="underline underline-offset-2 transition-colors hover:text-white"
+                  >
+                    Add it in Settings → Providers
+                  </Link>
+                  .
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMissingKeyBanner(null)}
+                  className="shrink-0 text-yellow-500 transition-colors hover:text-yellow-200"
+                  aria-label="Dismiss missing key banner"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
           </div>
         )}
 

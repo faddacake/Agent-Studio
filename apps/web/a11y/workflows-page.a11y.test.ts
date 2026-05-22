@@ -27,7 +27,7 @@ type AxeResults = axe.AxeResults;
 // ---------------------------------------------------------------------------
 const WORKFLOWS_HTML = /* html */ `<!DOCTYPE html>
 <html lang="en">
-<head><title>Workflows – AI Studio</title></head>
+<head><title>Workflows – Agent Studio</title></head>
 <body>
 <main>
 

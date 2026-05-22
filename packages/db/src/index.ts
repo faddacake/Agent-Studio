@@ -17,7 +17,7 @@ export function getDataDir(): string {
 }
 
 export function getDbPath(): string {
-  return path.join(getDataDir(), "db", "aistudio.db");
+  return path.join(getDataDir(), "db", "agentstudio.db");
 }
 
 export function getDb() {
@@ -97,4 +97,6 @@ export function dbHealthCheck(): void {
 export { sql } from "drizzle-orm";
 
 export { schema };
+
+export { resolveProviderKey } from "./resolveProviderKey.js";
 

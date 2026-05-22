@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState } from "react";
+import Link from "next/link";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { Port } from "@aistudio/shared";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -8,6 +9,7 @@ import { useShallow } from "zustand/react/shallow";
 import { formatDuration, formatCost, formatElapsed } from "@/lib/formatExecution";
 import { NODE_STATE_DOT } from "@/lib/nodeRunState";
 import { canRetry } from "@/lib/retryRun";
+import { isMissingKeyError } from "@/lib/missingKeyError";
 
 // ── Port color palette (matches InspectorPanel PortDot) ──
 
@@ -224,16 +226,32 @@ function CustomNodeComponent({ id, data, selected }: NodeProps) {
           </div>
         )}
 
-        {/* Inline error strip — shown only when this node failed */}
+        {/* Inline error strip — shown only when this node failed.
+            Key-related failures get an actionable "⚠ No API Key" badge with
+            a direct link to Settings → Providers instead of the raw error text. */}
         {isFailed && (
           <div
             className="mt-1.5 rounded border border-red-900/60 bg-red-950/40 px-1.5 py-1"
             title={runError ?? undefined}
           >
             <div className="flex items-start justify-between gap-1">
-              <p className="flex-1 line-clamp-2 text-[10px] leading-tight text-red-300">
-                {runError ?? "Node failed"}
-              </p>
+              {isMissingKeyError(runError) ? (
+                <p className="flex flex-1 flex-wrap items-center gap-x-1 text-[10px] leading-tight text-red-300">
+                  <span aria-hidden="true">⚠</span>
+                  <span>No API Key —</span>
+                  <Link
+                    href="/settings/providers"
+                    className="underline underline-offset-2 transition-colors hover:text-red-200"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Settings → Providers
+                  </Link>
+                </p>
+              ) : (
+                <p className="flex-1 line-clamp-2 text-[10px] leading-tight text-red-300">
+                  {runError ?? "Node failed"}
+                </p>
+              )}
               {canShowRetry && (
                 <button
                   type="button"

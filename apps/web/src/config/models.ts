@@ -1,10 +1,29 @@
 export type ModelCategory = "image" | "video" | "voice";
 
+/**
+ * Provider identifier — must match a key in providerRegistry.
+ * "external" is reserved for providers with no adapter (keeps SOON badge).
+ */
+export type ModelProvider =
+  | "fal"
+  | "replicate"
+  | "google"
+  | "openai"
+  | "anthropic"
+  | "grok"
+  | "ollama"
+  | "elevenlabs"
+  | "stability"
+  | "midjourney"
+  | "bedrock"
+  | "azure"
+  | "external";
+
 export interface ModelOption {
   id: string;
   name: string;
   category: ModelCategory;
-  provider: "replicate" | "fal" | "google" | "external";
+  provider: ModelProvider;
   /** Key into providerRegistry — determines which adapter handles execution */
   providerKey: string;
   /** Model identifier used by the provider adapter (e.g. "fal/flux-1.1-pro") */
@@ -71,10 +90,10 @@ export const IMAGE_MODELS: ModelOption[] = [
     id: "dall-e-3",
     name: "DALL·E 3",
     category: "image",
-    provider: "external",
-    providerKey: "external",
-    adapterModelId: "openai/dall-e-3",
-    supported: false,
+    provider: "openai",
+    providerKey: "openai",
+    adapterModelId: "dall-e-3",
+    supported: true,
     tags: ["text-rendering", "creative"],
     costTier: "high",
     estimatedCost: 0.12,
@@ -84,18 +103,18 @@ export const IMAGE_MODELS: ModelOption[] = [
   },
   {
     id: "gemini-imagen",
-    name: "Google Gemini Imagen",
+    name: "Google Imagen 3",
     category: "image",
     provider: "google",
     providerKey: "google",
-    adapterModelId: "google/gemini-imagen",
-    supported: false,
+    adapterModelId: "imagen-3.0-generate-002",
+    supported: true,
     tags: ["google", "multimodal"],
     costTier: "medium",
     estimatedCost: 0.05,
     speedTier: "fast",
     qualityTier: "production",
-    defaultParams: { width: 1024, height: 1024 },
+    defaultParams: { aspectRatio: "1:1" },
   },
   {
     id: "adobe-firefly",
@@ -129,17 +148,17 @@ export const IMAGE_MODELS: ModelOption[] = [
   },
   {
     id: "grok-image",
-    name: "Grok Image",
+    name: "Grok Aurora",
     category: "image",
-    provider: "external",
-    providerKey: "external",
-    adapterModelId: "xai/grok-image",
-    supported: false,
-    tags: ["xai"],
+    provider: "grok",
+    providerKey: "grok",
+    adapterModelId: "grok-2-image-1212",
+    supported: true,
+    tags: ["xai", "photorealistic"],
     costTier: "medium",
     estimatedCost: 0.05,
     speedTier: "fast",
-    qualityTier: "draft",
+    qualityTier: "production",
     defaultParams: {},
   },
   {
@@ -228,8 +247,8 @@ export const VIDEO_MODELS: ModelOption[] = [
     category: "video",
     provider: "google",
     providerKey: "google",
-    adapterModelId: "google/veo-3",
-    supported: false,
+    adapterModelId: "veo-003",
+    supported: true,
     tags: ["cutting-edge", "long-form"],
     costTier: "high",
     estimatedCost: 0.12,

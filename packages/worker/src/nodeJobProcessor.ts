@@ -1,6 +1,7 @@
 import { nodeExecutor } from "@aistudio/engine";
 import { registerBuiltInNodes } from "@aistudio/shared";
 import type { NodeExecutionContext, NodeExecutionResult } from "@aistudio/shared";
+import { resolveProviderKey } from "@aistudio/db";
 
 // Ensure node definitions are registered
 let initialized = false;
@@ -48,6 +49,19 @@ export interface NodeJobResult {
 export async function processNodeJob(jobData: NodeJobData): Promise<NodeJobResult> {
   ensureInitialized();
 
+  // Resolve image/video provider key for provider-backed nodes.
+  const resolvedKey = jobData.providerId
+    ? resolveProviderKey(jobData.providerId)
+    : null;
+
+  // Resolve LLM provider key for agent/ReAct/SubAgent nodes.
+  // When the node itself has no apiKey configured, fall back to the key stored
+  // in Settings → Providers so users only need to enter it once.
+  const llmProvider = (jobData.params.provider as string | undefined)?.trim();
+  const llmKeyInNode = (jobData.params.apiKey as string | undefined)?.trim();
+  const resolvedLLMKey =
+    llmProvider && !llmKeyInNode ? resolveProviderKey(llmProvider) : null;
+
   const context: NodeExecutionContext = {
     nodeId: jobData.nodeId,
     runId: jobData.runId,
@@ -56,6 +70,10 @@ export async function processNodeJob(jobData: NodeJobData): Promise<NodeJobResul
       ...jobData.params,
       // Inject node type for the executor's type resolution
       __nodeType: jobData.nodeType,
+      // Inject resolved API key so provider executor doesn't need DB access.
+      ...(resolvedKey ? { __apiKey: resolvedKey } : {}),
+      // Inject resolved LLM key when the node itself has no key configured.
+      ...(resolvedLLMKey ? { apiKey: resolvedLLMKey } : {}),
     },
     providerId: jobData.providerId,
     modelId: jobData.modelId,

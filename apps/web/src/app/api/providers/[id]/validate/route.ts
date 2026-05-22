@@ -5,7 +5,12 @@ import { getDb, schema } from "@aistudio/db";
 import { eq } from "drizzle-orm";
 import { resolveProviderKey } from "@/lib/providers/resolveProviderKey";
 
-const KNOWN_PROVIDERS = new Set(["fal", "replicate", "google"]);
+const KNOWN_PROVIDERS = new Set([
+  "fal", "replicate", "google",
+  "openai", "anthropic", "grok", "ollama",
+  "elevenlabs", "stability", "midjourney",
+  "bedrock", "azure",
+]);
 
 /**
  * POST /api/providers/:id/validate
@@ -57,14 +62,15 @@ export async function POST(
 
   try {
     if (id === "fal") {
-      // GET https://fal.run/models — requires valid key, returns 401 if not
-      const res = await fetch("https://fal.run/models", {
+      // GET /requests for a known model — returns 401 on bad key, 200 on valid
+      // (fal.run/models returns 404 regardless of auth, so we use a model route)
+      const res = await fetch("https://fal.run/fal-ai/flux/requests", {
         method: "GET",
         headers: { Authorization: `Key ${apiKey}` },
         signal: AbortSignal.timeout(8_000),
       });
-      valid = res.status !== 401 && res.status !== 403;
-      if (!valid) probeMessage = "API key rejected by Fal.ai (401/403)";
+      valid = res.ok;
+      if (!valid) probeMessage = "API key rejected by Fal.ai";
     } else if (id === "replicate") {
       // GET /v1/models — returns 401 on bad token, 200 on valid
       const res = await fetch("https://api.replicate.com/v1/models", {
@@ -79,6 +85,67 @@ export async function POST(
       // (no free auth endpoint is available without initiating a model call)
       valid = apiKey.startsWith("AIza") && apiKey.length > 20;
       if (!valid) probeMessage = "Google AI key format looks incorrect (expected AIza...)";
+    } else if (id === "openai") {
+      const res = await fetch("https://api.openai.com/v1/models", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(8_000),
+      });
+      valid = res.status !== 401 && res.status !== 403;
+      if (!valid) probeMessage = "API key rejected by OpenAI (401/403)";
+    } else if (id === "anthropic") {
+      // No free auth probe — validate format only (sk-ant-api03-...)
+      valid = apiKey.startsWith("sk-ant-") && apiKey.length > 30;
+      if (!valid) probeMessage = "Anthropic key format looks incorrect (expected sk-ant-...)";
+    } else if (id === "grok") {
+      // xAI returns 400 "invalid argument" for malformed keys and 401 for missing creds
+      // Use res.ok (2xx) to catch both cases reliably
+      const res = await fetch("https://api.x.ai/v1/models", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(8_000),
+      });
+      valid = res.ok;
+      if (!valid) probeMessage = "API key rejected by xAI";
+    } else if (id === "ollama") {
+      // apiKey is the base URL for the Ollama server
+      const baseUrl = apiKey.replace(/\/$/, "");
+      const res = await fetch(`${baseUrl}/api/tags`, {
+        method: "GET",
+        signal: AbortSignal.timeout(5_000),
+      });
+      valid = res.ok;
+      if (!valid) probeMessage = "Could not reach Ollama server — is it running at that URL?";
+    } else if (id === "elevenlabs") {
+      const res = await fetch("https://api.elevenlabs.io/v1/user", {
+        method: "GET",
+        headers: { "xi-api-key": apiKey },
+        signal: AbortSignal.timeout(8_000),
+      });
+      valid = res.status !== 401 && res.status !== 403;
+      if (!valid) probeMessage = "API key rejected by ElevenLabs (401/403)";
+    } else if (id === "stability") {
+      const res = await fetch("https://api.stability.ai/v1/user/account", {
+        method: "GET",
+        headers: { Authorization: `Bearer ${apiKey}` },
+        signal: AbortSignal.timeout(8_000),
+      });
+      valid = res.status !== 401 && res.status !== 403;
+      if (!valid) probeMessage = "API key rejected by Stability AI (401/403)";
+    } else if (id === "midjourney") {
+      // No public auth endpoint — length check only
+      valid = apiKey.length > 10;
+      if (!valid) probeMessage = "Midjourney token looks too short";
+    } else if (id === "bedrock") {
+      // Format: AKIAIOSFODNN7EXAMPLE:secretAccessKey:us-east-1
+      const parts = apiKey.split(":");
+      valid = parts.length >= 3 && parts[0].startsWith("AKIA") && parts[0].length === 20;
+      if (!valid) probeMessage = "AWS credentials format incorrect (expected AKIA...:secret:region)";
+    } else if (id === "azure") {
+      // Format: https://my-resource.openai.azure.com|apiKey
+      const pipeIdx = apiKey.indexOf("|");
+      valid = pipeIdx > 0 && apiKey.startsWith("https://") && apiKey.length - pipeIdx > 10;
+      if (!valid) probeMessage = "Azure format incorrect (expected https://your-resource.openai.azure.com|api-key)";
     }
   } catch (err) {
     probeMessage = err instanceof Error && err.name === "TimeoutError"

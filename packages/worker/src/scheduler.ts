@@ -1,5 +1,5 @@
 /**
- * scheduler.ts — lightweight cron runner for AI Studio workflow schedules.
+ * scheduler.ts — lightweight cron runner for Agent Studio workflow schedules.
  *
  * On startup, aligns to the next minute boundary then ticks every 60 seconds.
  * Each tick reads all `workflow_schedule:*` rows from the settings table,

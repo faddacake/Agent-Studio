@@ -2,7 +2,7 @@
 
 ## [1.0.0] — 2026-04-21
 
-First stable release of AI Studio.
+First stable release of Agent Studio.
 
 ### Features
 - **Visual Workflow Canvas** — React Flow drag-and-drop editor with node palette, slash-command insert, undo/redo, inline rename, and minimap

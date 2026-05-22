@@ -56,7 +56,7 @@
 │        (Replicate, Fal)    (download outputs)             │
 │                                                           │
 │  ┌───────────────────────────────────────────┐           │
-│  │  SQLite (volume: /data/db/aistudio.db)    │           │
+│  │  SQLite (volume: /data/db/agentstudio.db)    │           │
 │  │  WAL mode + auto-checkpoint               │           │
 │  └───────────────────────────────────────────┘           │
 │  ┌───────────────────────────────────────────┐           │
@@ -1121,7 +1121,7 @@ Drizzle ORM schema in `packages/db/src/schema.ts` mirrors this SQL. Migrations a
 ### Pre-Migration Backup
 
 On startup, before applying any pending migrations:
-1. Copy `aistudio.db` to `aistudio.db.bak.YYYYMMDD-HHMMSS`.
+1. Copy `agentstudio.db` to `agentstudio.db.bak.YYYYMMDD-HHMMSS`.
 2. Retain only the 3 most recent backups; delete older ones.
 3. Run migrations. If any migration fails, log a clear error and **exit without starting the app** (never run against a partially migrated schema).
 4. A CLI helper (`scripts/restore-backup.ts`) lists available backups and restores a selected one.
@@ -1131,10 +1131,10 @@ On startup, before applying any pending migrations:
 ```
 /data/
 ├── db/
-│   ├── aistudio.db                           # SQLite database (WAL mode)
-│   ├── aistudio.db-wal                       # WAL file
-│   ├── aistudio.db-shm                       # Shared memory
-│   └── aistudio.db.bak.20260210-143022       # Pre-migration backup
+│   ├── agentstudio.db                           # SQLite database (WAL mode)
+│   ├── agentstudio.db-wal                       # WAL file
+│   ├── agentstudio.db-shm                       # Shared memory
+│   └── agentstudio.db.bak.20260210-143022       # Pre-migration backup
 ├── assets/
 │   ├── runs/
 │   │   └── {runId}/
@@ -1186,7 +1186,7 @@ The `/usage` page includes a storage section showing:
 
 ### Backup Strategy
 
-- **SQLite**: Copy `/data/db/aistudio.db` while the application is running (WAL mode ensures consistent reads). Recommended: `sqlite3 .backup`.
+- **SQLite**: Copy `/data/db/agentstudio.db` while the application is running (WAL mode ensures consistent reads). Recommended: `sqlite3 .backup`.
 - **Assets**: Copy `/data/assets/` directory.
 - **Full backup**: Copy the entire `/data/` mount.
 - Documentation provides example cron jobs and rsync commands per PRD §14.

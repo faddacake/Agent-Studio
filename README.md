@@ -1,4 +1,4 @@
-# AI Studio
+# Agent Studio
 
 A self-hosted visual workflow automation platform for building, running, and scheduling multi-step AI image and video pipelines. Drag-and-drop React Flow canvas, real-time execution, BullMQ workers, and a built-in video editor — all in one Docker container.
 

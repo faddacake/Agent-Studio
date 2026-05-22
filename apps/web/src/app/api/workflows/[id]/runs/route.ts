@@ -176,6 +176,15 @@ function makeDispatch(runId: string, outputDir: string): DispatchJob {
         ? resolveProviderKey(resolvedProviderId)
         : null;
 
+      // Resolve LLM provider key for agent/ReAct/SubAgent nodes.
+      // These nodes store their provider in params.provider and their key in
+      // params.apiKey.  If the node has no key configured, look it up from the
+      // Providers settings page so users only have to enter it once.
+      const llmProvider = (job.params.provider as string | undefined)?.trim();
+      const llmKeyInNode = (job.params.apiKey as string | undefined)?.trim();
+      const resolvedLLMKey =
+        llmProvider && !llmKeyInNode ? resolveProviderKey(llmProvider) : null;
+
       const context: NodeExecutionContext = {
         nodeId: job.nodeId,
         runId: job.runId,
@@ -186,6 +195,8 @@ function makeDispatch(runId: string, outputDir: string): DispatchJob {
           __nodeType: job.nodeType,
           // Inject resolved API key so provider executor doesn't need DB access.
           ...(resolvedKey ? { __apiKey: resolvedKey } : {}),
+          // Inject resolved LLM key when the node itself has no key configured.
+          ...(resolvedLLMKey ? { apiKey: resolvedLLMKey } : {}),
         },
         providerId: job.providerId,
         modelId: job.modelId,

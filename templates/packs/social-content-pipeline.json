@@ -3,7 +3,7 @@
     "id": "social-content-pipeline",
     "name": "Social Content Pipeline",
     "version": "1.0.0",
-    "author": "AI Studio",
+    "author": "Agent Studio",
     "description": "Generate images, score with CLIP, rank the best, format for social platforms, and export as a bundle.",
     "category": "content-creation",
     "tags": ["social", "image", "scoring", "export", "pipeline"],

@@ -9,11 +9,13 @@
  */
 
 import { memo, useState } from "react";
+import Link from "next/link";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { Port } from "@aistudio/shared";
 import type { AgentStep } from "@aistudio/shared";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useShallow } from "zustand/react/shallow";
+import { isMissingKeyError } from "@/lib/missingKeyError";
 
 // ── Port colours (shared with CustomNode) ──
 
@@ -115,14 +117,15 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
 
   const [showAllSteps, setShowAllSteps] = useState(false);
 
-  // Pull run state + agent steps from the Zustand snapshot.
+  // Pull run state + agent steps + error from the Zustand snapshot.
   // NodeDebugInfo.agentSteps is populated by buildDebugSnapshot from NodeState.
-  const { runStatus, agentSteps } = useWorkflowStore(useShallow((state) => {
-    if (!state.debugSnapshot) return { runStatus: null as string | null, agentSteps: null as AgentStep[] | null };
+  const { runStatus, agentSteps, runError } = useWorkflowStore(useShallow((state) => {
+    if (!state.debugSnapshot) return { runStatus: null as string | null, agentSteps: null as AgentStep[] | null, runError: null as string | null };
     const node = state.debugSnapshot.nodes.find((n) => n.nodeId === id);
     return {
       runStatus:  node?.status ?? null,
       agentSteps: node?.agentSteps ?? null,
+      runError:   node?.error ?? null,
     };
   }));
 
@@ -239,6 +242,31 @@ function AgentNodeComponent({ id, data, selected }: NodeProps) {
           <p className="text-[10px] text-neutral-500">
             {agentSteps.length} step{agentSteps.length !== 1 ? "s" : ""}
           </p>
+        </div>
+      )}
+
+      {/* Error strip — key-related failures show actionable badge; other failures
+          show the raw message (fixes the previous gap where AgentNode showed no
+          error text at all, only a red border). */}
+      {isFailed && (
+        <div className="border-t border-red-900/40 bg-red-950/30 px-3 py-1.5">
+          {isMissingKeyError(runError) ? (
+            <p className="flex flex-wrap items-center gap-x-1 text-[10px] leading-tight text-red-300">
+              <span aria-hidden="true">⚠</span>
+              <span>No API Key —</span>
+              <Link
+                href="/settings/providers"
+                className="underline underline-offset-2 transition-colors hover:text-red-200"
+                onClick={(e) => e.stopPropagation()}
+              >
+                Settings → Providers
+              </Link>
+            </p>
+          ) : (
+            <p className="line-clamp-2 text-[10px] leading-tight text-red-300">
+              {runError ?? "Agent failed"}
+            </p>
+          )}
         </div>
       )}
 

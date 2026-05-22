@@ -5,6 +5,6 @@ export default defineConfig({
   out: "./src/migrations",
   dialect: "sqlite",
   dbCredentials: {
-    url: process.env.DATABASE_URL || "./data/db/aistudio.db",
+    url: process.env.DATABASE_URL || "./data/db/agentstudio.db",
   },
 });

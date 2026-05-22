@@ -5,7 +5,12 @@ import { getDb, schema } from "@aistudio/db";
 import { encrypt } from "@aistudio/crypto";
 import { eq } from "drizzle-orm";
 
-const KNOWN_PROVIDERS = new Set(["fal", "replicate", "google"]);
+const KNOWN_PROVIDERS = new Set([
+  "fal", "replicate", "google",
+  "openai", "anthropic", "grok", "ollama",
+  "elevenlabs", "stability", "midjourney",
+  "bedrock", "azure",
+]);
 
 /**
  * POST /api/providers/:id

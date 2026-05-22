@@ -19,6 +19,7 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import type { Port } from "@aistudio/shared";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useShallow } from "zustand/react/shallow";
+import { isVaultConfigError } from "@/lib/missingKeyError";
 
 // ── Port colours (shared with CustomNode + AgentNode) ────────────────────────
 
@@ -71,12 +72,13 @@ function ObsidianMemoryNodeComponent({ id, data, selected }: NodeProps) {
   const operation = (params.operation as string | undefined) ?? "search";
   const vaultPath = (params.vaultPath as string | undefined)?.trim() || "/app/memory";
 
-  // Pull run status from debug snapshot; pull last result from latestOutputsByNode
-  const { runStatus, lastResult } = useWorkflowStore(useShallow((state) => {
+  // Pull run status + error from debug snapshot; pull last result from latestOutputsByNode
+  const { runStatus, runError, lastResult } = useWorkflowStore(useShallow((state) => {
     const debugNode = state.debugSnapshot?.nodes.find((n) => n.nodeId === id);
     const latest = state.latestOutputsByNode?.[id];
     return {
       runStatus:  debugNode?.status ?? null,
+      runError:   debugNode?.error ?? null,
       lastResult: latest?.textSnippet?.split("\n")[0].slice(0, 80) ?? latest?.summary?.slice(0, 80) ?? null,
     };
   }));
@@ -147,6 +149,26 @@ function ObsidianMemoryNodeComponent({ id, data, selected }: NodeProps) {
       {isRunning && (
         <div className="border-t border-neutral-800 px-3 py-1.5">
           <p className="text-[10px] text-emerald-400 animate-pulse">Working…</p>
+        </div>
+      )}
+
+      {/* Error strip — two tiers of actionability:
+          1. Vault config error (ENOENT / EACCES / bad path) → actionable hint
+          2. Generic failure                                  → raw error, truncated */}
+      {isFailed && (
+        <div
+          className="border-t border-red-900/40 bg-red-950/30 px-3 py-1.5"
+          title={runError ?? undefined}
+        >
+          {isVaultConfigError(runError) ? (
+            <p className="text-[10px] leading-tight text-red-300">
+              <span aria-hidden="true">⚠</span>{" "}Vault path error — verify path in node settings
+            </p>
+          ) : (
+            <p className="line-clamp-2 text-[10px] leading-tight text-red-300">
+              {runError ?? "Memory node failed"}
+            </p>
+          )}
         </div>
       )}
 

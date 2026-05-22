@@ -17,6 +17,7 @@
     "lint": "echo 'no lint configured yet'"
   },
   "dependencies": {
+    "@aistudio/crypto": "workspace:*",
     "better-sqlite3": "^11.6.0",
     "drizzle-orm": "^0.39.1"
   },

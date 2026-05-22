@@ -1,7 +1,7 @@
 /**
  * Built-in template pack registration.
  *
- * Loads template packs shipped with AI Studio from the templates/packs/
+ * Loads template packs shipped with Agent Studio from the templates/packs/
  * directory. Each pack is a JSON file containing a manifest and templates.
  *
  * This module is designed to work in both Node.js (server) and bundled

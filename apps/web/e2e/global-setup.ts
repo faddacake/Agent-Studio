@@ -82,7 +82,7 @@ export default async function globalSetup(_config: FullConfig): Promise<void> {
   // Direct insertion avoids triggering the engine's async dispatch loop, which
   // would require Redis + provider credentials for anything beyond an empty graph.
   // The graphSnapshot is all the replay route needs.
-  const dbPath = `${E2E_DATA_DIR}/db/aistudio.db`;
+  const dbPath = `${E2E_DATA_DIR}/db/agentstudio.db`;
   const db = new Database(dbPath);
   const runId = randomUUID();
   const now = new Date().toISOString();

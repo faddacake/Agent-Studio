@@ -2,7 +2,7 @@ import type { NodeDefinition, SerializableNodeDefinition } from "./nodeDefinitio
 import { NodeCategory, toSerializable } from "./nodeDefinition.js";
 
 /**
- * Central registry for all node definitions in AI Studio.
+ * Central registry for all node definitions in Agent Studio.
  *
  * Consumers (inspector, palette, engine, validator) query this registry
  * instead of hardcoding knowledge about node types.
