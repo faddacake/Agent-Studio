@@ -1,4 +1,4 @@
-# SESSION CONTEXT — AI Studio
+# SESSION CONTEXT — Itera Studio
 
 Date: 2026-04-21
 Session: V1 Final — Scheduler polish, Schedule UI, Docker production fixes, documentation (Prompts 51–54)
@@ -17,17 +17,17 @@ Session: V1 Final — Scheduler polish, Schedule UI, Docker production fixes, do
 - `WorkflowCanvas.tsx`: added `scheduleActive` state + `useEffect` that fetches initial schedule status on workflow load. Schedule button now shows a violet dot and active-tinted style when a schedule is enabled.
 
 **Prompt 53 — Docker production fixes:**
-- `Dockerfile`: added `ffmpeg` to runner-stage apt install (required by `editorExportJobRealRenderer.ts`); added `COPY --from=builder` for `packages/shared/dist` and `packages/engine/dist` — both were missing, causing the worker to crash on the first `@aistudio/shared` or `@aistudio/engine` import.
+- `Dockerfile`: added `ffmpeg` to runner-stage apt install (required by `editorExportJobRealRenderer.ts`); added `COPY --from=builder` for `packages/shared/dist` and `packages/engine/dist` — both were missing, causing the worker to crash on the first `/shared` or `/engine` import.
 - `entrypoint.sh`: changed shebang to `#!/bin/bash`; replaced POSIX `wait` pair with `wait -n` (fail-fast — container exits when either process dies); wrapped Next.js `cd` in a subshell.
-- `docker-compose.yml`: added `worker` service (`pnpm --filter @aistudio/worker dev`) with `API_BASE_URL=http://app:3000` and `depends_on: app: condition: service_healthy`.
+- `docker-compose.yml`: added `worker` service (`pnpm --filter /worker dev`) with `API_BASE_URL=http://app:3000` and `depends_on: app: condition: service_healthy`.
 
 **Prompt 54 — Documentation:**
 - `README.md`: rewrote with full feature list, node table, provider setup, package layout, and local dev instructions.
 - `docs/BUILD_STATUS.md`: replaced stale early-pipeline milestones with a complete V1 checklist and V1.1 gap list.
-- `AI_STUDIO_TASKS.md`: replaced 6 ancient items with structured V1.1 and V2 backlog.
+- `ITERA_STUDIO_TASKS.md`: replaced 6 ancient items with structured V1.1 and V2 backlog.
 - `docs/SESSION_CONTEXT.md`: updated to reflect Prompts 51–54.
 
-Next recommended task: Implement the scheduled workflows audit page — a settings-level view listing all `workflow_schedule:*` entries with their cron expression, enabled state, and a link to each canvas (Task 2 in `AI_STUDIO_TASKS.md`).
+Next recommended task: Implement the scheduled workflows audit page — a settings-level view listing all `workflow_schedule:*` entries with their cron expression, enabled state, and a link to each canvas (Task 2 in `ITERA_STUDIO_TASKS.md`).
 
 ---
 
@@ -557,7 +557,7 @@ Extended `runExportJob` to load the persisted export payload from the DB row and
 - Step 1: `getEditorExportJob(jobId)` — loads the persisted row; throws `export job not found` if missing
 - Step 2: `ExportJobPayloadSchema.safeParse(job.payload)` — validates the stored payload; throws `export job payload invalid for job <id>: …` if malformed
 - Step 3: `executeExportJob(jobId, "completed")` — lifecycle: pending → running → completed (renderer plugs in here, receives `parsed.data`)
-- Now imports `ExportJobPayloadSchema` from `@aistudio/shared` and `getEditorExportJob` from `./editorExportJobs`
+- Now imports `ExportJobPayloadSchema` from `/shared` and `getEditorExportJob` from `./editorExportJobs`
 - DB is the sole source of truth; queue still carries only `{ jobId }`
 
 **`apps/web/src/server/api/editorExportJobRunnerContract.test.ts`** (extended — 5 new cases across 2 new suites):
@@ -608,7 +608,7 @@ Next recommended task: Extend the dedicated export runner to load the persisted 
 Added the first real BullMQ worker processor for export jobs: consumes queued `{ jobId }` payloads and drives the DB-backed lifecycle to a terminal state, completing the queue-backed processing flow without real rendering.
 
 **`packages/worker/src/exportJobProcessor.ts`** (new) — standalone worker-process processor:
-- `processExportJob(data: { jobId }, db?)` using `sql` tag from `@aistudio/db` (no new deps)
+- `processExportJob(data: { jobId }, db?)` using `sql` tag from `/db` (no new deps)
 - Claim: `UPDATE ... SET status = 'running' WHERE id = ? AND status = 'pending'` (conditional, atomic)
 - Finish: `UPDATE ... SET status = 'completed' WHERE id = ? AND status = 'running'`
 - Throws on missing job or failed claim so BullMQ marks the queue job as failed
@@ -1592,7 +1592,7 @@ Session: Editor Project Persistence (V1 Foundation) ✅ SHIPPED
 
 ## Session Summary — Editor Project Persistence (V1 Foundation) (2026-03-18)
 
-Introduced the minimal persistence layer for the Video Editor V1. Added an `editor_projects` table to the SQLite schema (migration `0007_editor_projects`) with columns for `id`, `name`, `aspect_ratio`, `scenes` (JSON), `audio_track` (JSON, nullable), `created_at`, and `updated_at`. Defined TypeScript types in `apps/web/src/lib/editorProjectTypes.ts` covering `EditorProject`, `Scene`, `TextOverlay`, `AudioTrack`, and `AspectRatio`. Created a server-side data access module at `apps/web/src/server/api/editorProjects.ts` with `listEditorProjects`, `getEditorProject`, `createEditorProject`, `updateEditorProject`, and `deleteEditorProject` — including a shared `parseRow` helper that converts raw DB rows to typed `EditorProject` objects. Exposed the CRUD operations over HTTP via thin Next.js route handlers at `GET/POST /api/editor-projects` and `GET/PATCH/DELETE /api/editor-projects/[id]`, following the exact same pattern as `node-presets` and `fragments`. Scenes reference artifacts by path only, keeping the existing artifact system as the sole source of truth for media files. Updated `docs/AI_STUDIO_SYSTEM_CONTEXT.md` with a "Video Editor (V1)" section. Web typecheck and db package build both clean.
+Introduced the minimal persistence layer for the Video Editor V1. Added an `editor_projects` table to the SQLite schema (migration `0007_editor_projects`) with columns for `id`, `name`, `aspect_ratio`, `scenes` (JSON), `audio_track` (JSON, nullable), `created_at`, and `updated_at`. Defined TypeScript types in `apps/web/src/lib/editorProjectTypes.ts` covering `EditorProject`, `Scene`, `TextOverlay`, `AudioTrack`, and `AspectRatio`. Created a server-side data access module at `apps/web/src/server/api/editorProjects.ts` with `listEditorProjects`, `getEditorProject`, `createEditorProject`, `updateEditorProject`, and `deleteEditorProject` — including a shared `parseRow` helper that converts raw DB rows to typed `EditorProject` objects. Exposed the CRUD operations over HTTP via thin Next.js route handlers at `GET/POST /api/editor-projects` and `GET/PATCH/DELETE /api/editor-projects/[id]`, following the exact same pattern as `node-presets` and `fragments`. Scenes reference artifacts by path only, keeping the existing artifact system as the sole source of truth for media files. Updated `docs/ITERA_STUDIO_SYSTEM_CONTEXT.md` with a "Video Editor (V1)" section. Web typecheck and db package build both clean.
 
 **Next recommended task:** Build the Video Editor UI shell — a new page at `/editor` (or `/editor/[id]`) that loads an `EditorProject`, renders a scene list on the left, a preview area in the centre, and a basic toolbar (add scene from artifact picker, reorder, set duration). This is the UI layer that consumes the persistence model added this session.
 
@@ -1674,7 +1674,7 @@ Session: Editor Project Persistence (V1 Foundation) ✅ SHIPPED
 
 ## Session Summary — Editor Project Persistence (V1 Foundation) (2026-03-18)
 
-Introduced the minimal persistence layer for the Video Editor V1. Added an `editor_projects` table to the SQLite schema (migration `0007_editor_projects`) with columns for `id`, `name`, `aspect_ratio`, `scenes` (JSON), `audio_track` (JSON, nullable), `created_at`, and `updated_at`. Defined TypeScript types in `apps/web/src/lib/editorProjectTypes.ts` covering `EditorProject`, `Scene`, `TextOverlay`, `AudioTrack`, and `AspectRatio`. Created a server-side data access module at `apps/web/src/server/api/editorProjects.ts` with `listEditorProjects`, `getEditorProject`, `createEditorProject`, `updateEditorProject`, and `deleteEditorProject` — including a shared `parseRow` helper that converts raw DB rows to typed `EditorProject` objects. Exposed the CRUD operations over HTTP via thin Next.js route handlers at `GET/POST /api/editor-projects` and `GET/PATCH/DELETE /api/editor-projects/[id]`, following the exact same pattern as `node-presets` and `fragments`. Scenes reference artifacts by path only, keeping the existing artifact system as the sole source of truth for media files. Updated `docs/AI_STUDIO_SYSTEM_CONTEXT.md` with a "Video Editor (V1)" section. Web typecheck and db package build both clean.
+Introduced the minimal persistence layer for the Video Editor V1. Added an `editor_projects` table to the SQLite schema (migration `0007_editor_projects`) with columns for `id`, `name`, `aspect_ratio`, `scenes` (JSON), `audio_track` (JSON, nullable), `created_at`, and `updated_at`. Defined TypeScript types in `apps/web/src/lib/editorProjectTypes.ts` covering `EditorProject`, `Scene`, `TextOverlay`, `AudioTrack`, and `AspectRatio`. Created a server-side data access module at `apps/web/src/server/api/editorProjects.ts` with `listEditorProjects`, `getEditorProject`, `createEditorProject`, `updateEditorProject`, and `deleteEditorProject` — including a shared `parseRow` helper that converts raw DB rows to typed `EditorProject` objects. Exposed the CRUD operations over HTTP via thin Next.js route handlers at `GET/POST /api/editor-projects` and `GET/PATCH/DELETE /api/editor-projects/[id]`, following the exact same pattern as `node-presets` and `fragments`. Scenes reference artifacts by path only, keeping the existing artifact system as the sole source of truth for media files. Updated `docs/ITERA_STUDIO_SYSTEM_CONTEXT.md` with a "Video Editor (V1)" section. Web typecheck and db package build both clean.
 
 **Next recommended task:** Build the Video Editor UI shell — a new page at `/editor` (or `/editor/[id]`) that loads an `EditorProject`, renders a scene list on the left, a preview area in the centre, and a basic toolbar (add scene from artifact picker, reorder, set duration). This is the UI layer that consumes the persistence model added this session.
 
@@ -1741,7 +1741,7 @@ Session: Cross-Modal Config Truthfulness Pass + Persistent Context File ✅ SHIP
 
 ## Session Summary — Cross-Modal Config Truthfulness Pass + Persistent Context File (2026-03-18)
 
-Completed the remaining cross-modal truthfulness gaps — focused on surfaces that were still image-only after the previous hardening pass. The run history detail page (`history/[runId]/page.tsx`) was the largest gap: `previewArtifacts` only extracted image refs so video artifacts from Kling runs were completely invisible on the history page — no thumbnail, no preview panel, no export selection. Fixed by extracting both image and video refs, passing `mimeType` through the `ArtifactPreviewable` contract, rendering video thumbnails as `<video muted>` elements in the thumbnail strip, adding a direct `ArtifactVideo` sub-component for the Outputs section, and suppressing the "Use in Canvas" affordance for video artifacts (no canvas Video Input node exists). Added a `"Prompt → Video"` entry to `lib/presets.ts` so the slash-command palette surfaces a video quick-chain alongside image presets — without this, the product appeared image-only to new users from the first interaction. Fixed the hardcoded `title="Insert as Image Input node on canvas"` in `ArtifactPreviewPanel` to the modality-agnostic `"Insert as input node on canvas"`. Created `docs/AI_STUDIO_SYSTEM_CONTEXT.md` as the permanent project reference file covering architecture, current capabilities, UX principles, V1 model strategy, dev workflow, what to avoid, and V1 completion definition. Web typecheck clean throughout.
+Completed the remaining cross-modal truthfulness gaps — focused on surfaces that were still image-only after the previous hardening pass. The run history detail page (`history/[runId]/page.tsx`) was the largest gap: `previewArtifacts` only extracted image refs so video artifacts from Kling runs were completely invisible on the history page — no thumbnail, no preview panel, no export selection. Fixed by extracting both image and video refs, passing `mimeType` through the `ArtifactPreviewable` contract, rendering video thumbnails as `<video muted>` elements in the thumbnail strip, adding a direct `ArtifactVideo` sub-component for the Outputs section, and suppressing the "Use in Canvas" affordance for video artifacts (no canvas Video Input node exists). Added a `"Prompt → Video"` entry to `lib/presets.ts` so the slash-command palette surfaces a video quick-chain alongside image presets — without this, the product appeared image-only to new users from the first interaction. Fixed the hardcoded `title="Insert as Image Input node on canvas"` in `ArtifactPreviewPanel` to the modality-agnostic `"Insert as input node on canvas"`. Created `docs/ITERA_STUDIO_SYSTEM_CONTEXT.md` as the permanent project reference file covering architecture, current capabilities, UX principles, V1 model strategy, dev workflow, what to avoid, and V1 completion definition. Web typecheck clean throughout.
 
 **Next recommended task:** Verify the workflow canvas node palette exposes `kling-1.6` as a draggable video-generation node — check that `modelToNodeDefinition()` in `packages/shared/src/modelBridge.ts` correctly maps video-category `ModelOption` entries into `NodeDefinition` objects with a `video_out` port, and that `initializeNodeRegistry()` registers them at startup so the "Kling 1.6" node appears in the canvas palette alongside the FLUX and SDXL image nodes. This would complete the end-to-end story: user can find a Kling node in the palette, place it on the canvas, wire a Prompt Template to it, run, and see a video in the inspector and history page.
 
@@ -2843,7 +2843,7 @@ Added a "CI & Branch Protection" section at the end of the contributor setup doc
 
 **File:** `.github/workflows/ci.yml`
 
-Added an `a11y` CI job (lines 53–105) that mirrors the existing `e2e` job structure exactly: `needs: ci`, Node 22, pnpm + store cache, Playwright browser cache keyed on `pnpm-lock.yaml`, conditional `install --with-deps` vs `install-deps` for cache hits, and a failure artifact upload to `a11y-results/` with 7-day retention. The test command is `pnpm --filter @aistudio/web test:a11y:browser` which runs all 14 fixture-based Playwright tests including the axe-core WCAG scan. The `a11y` and `e2e` jobs run in parallel after `ci` passes, sharing the same Playwright browser cache key. Any WCAG violation or fixture regression will now fail the PR check.
+Added an `a11y` CI job (lines 53–105) that mirrors the existing `e2e` job structure exactly: `needs: ci`, Node 22, pnpm + store cache, Playwright browser cache keyed on `pnpm-lock.yaml`, conditional `install --with-deps` vs `install-deps` for cache hits, and a failure artifact upload to `a11y-results/` with 7-day retention. The test command is `pnpm --filter /web test:a11y:browser` which runs all 14 fixture-based Playwright tests including the axe-core WCAG scan. The `a11y` and `e2e` jobs run in parallel after `ci` passes, sharing the same Playwright browser cache key. Any WCAG violation or fixture regression will now fail the PR check.
 
 ---
 
@@ -2986,7 +2986,7 @@ This feature was delivered across four sessions. All layers — implementation, 
 - `playwright.e2e.config.ts`: Next.js on port 3001, isolated `DATA_DIR=/tmp/aistudio-e2e`, no `MASTER_KEY` (activates dev auth bypass)
 - `e2e/global-setup.ts`: creates real workflow via live API; inserts historical run directly into SQLite (no engine/Redis side effects); writes seed fixture to `/tmp/aistudio-e2e/e2e-seed.json`
 - 3 tests: banner visible on `?replay=` load; disappears after mocked 202; persists after mocked 500
-- Run: `pnpm --filter @aistudio/web test:e2e`
+- Run: `pnpm --filter /web test:e2e`
 
 **GitHub Actions CI** (`.github/workflows/ci.yml`)
 - New `e2e` job with `needs: ci` — runs only after lint/typecheck/unit/build pass
@@ -3175,7 +3175,7 @@ Completed (Session 61 — committed as `00e68da`):
 - [x] Built settings/providers/page.tsx — replaces stub with full provider management UI
   configured/not-configured status per provider, green border when configured
   password input + Save; Update Key / Remove actions; docs links; no keys returned to client
-- [x] Encryption: AES-256-GCM via @aistudio/crypto encrypt(); PBKDF2 salt embedded in api_key_encrypted
+- [x] Encryption: AES-256-GCM via /crypto encrypt(); PBKDF2 salt embedded in api_key_encrypted
 
 Completed (Session 60 — committed as `711a467`):
 - [x] Identified getting-started provider check was hitting /api/health (always 200) — always showed complete
@@ -3266,7 +3266,7 @@ Completed (Session 4 — uncommitted):
 - [x] Engine debug snapshot: buildDebugSnapshot(), buildGraphPreview(), BlockedReason types
 - [x] RunDebuggerPanel: tier/flat views, status filters, per-node expanded detail
 - [x] Blocked reason computation: waiting, failed upstream, cancelled, budget, validation
-- [x] Added @aistudio/engine dependency to web app
+- [x] Added /engine dependency to web app
 - [x] Updated documentation
 
 Completed (Session 5 — uncommitted):
@@ -3373,7 +3373,7 @@ Completed (Session 16 — uncommitted):
 
 Completed (Session 17 — committed as `afd3cda`):
 - [x] Created templatePackStorage.ts utility with rehydratePersistedPacks(), persistPack(), removePersistedPack()
-- [x] Stores packs under "aiStudio.templatePacks" localStorage key as JSON array
+- [x] Stores packs under "iteraStudio.templatePacks" localStorage key as JSON array
 - [x] Rehydrates persisted packs on gallery mount (after built-in packs, before first render)
 - [x] Validates each pack via parseTemplatePack() during rehydration — invalid packs silently skipped
 - [x] Skips built-in packs during rehydration to avoid duplicates
@@ -3404,7 +3404,7 @@ Completed (Session 19 — uncommitted):
 - [x] All 38 engine tests pass (4 suites)
 
 Completed (Session 20 — uncommitted):
-- [x] Added sharp dependency to packages/engine (pnpm add sharp --filter @aistudio/engine)
+- [x] Added sharp dependency to packages/engine (pnpm add sharp --filter /engine)
 - [x] Created packages/engine/src/local/resize.ts — executeResize() using sharp().resize()
 - [x] Created packages/engine/src/local/crop.ts — executeCrop() using sharp().extract(); maps x/y params → left/top (sharp convention)
 - [x] Created packages/engine/src/local/formatConvert.ts — executeFormatConvert() supporting jpeg/png/webp with quality param
@@ -3521,7 +3521,7 @@ Completed (Session 24 — Generator-backed workflow node integration):
 - [x] Expanded `model` enum: added fal-ai/flux/schnell and fal-ai/flux-pro/v1.1 options
 - [x] Updated bestOfNNode uiSchema groups: Generation now includes provider, model, seed fields
 - [x] Updated executeBestOfN to honor params.seed as explicit base seed (overrides prompt-derived seed)
-- [x] Rebuilt @aistudio/shared after definition changes
+- [x] Rebuilt /shared after definition changes
 - [x] Created packages/engine/src/bestOfNWorkflow.integration.test.ts (21 new tests, 5 suites):
   - Suite 1: "best-of-n node through RunCoordinator + NodeExecutor dispatch"
     - run completes, node state completed, N ArtifactRefs generated, K selected, fully serializable, attempt/timestamps set
@@ -3915,7 +3915,7 @@ Files Modified (Session 28):
 - docs/SESSION_CONTEXT.md (this file)
 
 Completed (Session 27 — Canvas connection validation):
-- [x] Created apps/web/src/lib/connectionValidation.ts: isConnectionValid(nodes, connection) using PORT_COMPATIBILITY from @aistudio/shared
+- [x] Created apps/web/src/lib/connectionValidation.ts: isConnectionValid(nodes, connection) using PORT_COMPATIBILITY from /shared
 - [x] Wired isValidConnection prop on <ReactFlow> in WorkflowCanvas.tsx — React Flow's native visual rejection (red line, no snap) when incompatible ports are dragged
 - [x] Typed for Connection | Edge to match React Flow's IsValidConnection<Edge> signature
 - [x] No new state, no toast, no engine changes — pure canvas-layer validation

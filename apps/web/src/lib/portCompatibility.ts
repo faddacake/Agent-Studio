@@ -3,11 +3,11 @@
  * "Use in Canvas" auto-connect feature.
  *
  * Deliberately thin: delegates the compatibility matrix to the canonical
- * PORT_COMPATIBILITY table from @aistudio/shared so there is one source of
+ * PORT_COMPATIBILITY table from /shared so there is one source of
  * truth for what connects to what.
  */
-import { PORT_COMPATIBILITY } from "@aistudio/shared";
-import type { Port } from "@aistudio/shared";
+import { PORT_COMPATIBILITY } from "@iterastudio/shared";
+import type { Port } from "@iterastudio/shared";
 
 /**
  * Given the output port type of the node being inserted and the list of

@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { eq } from "drizzle-orm";
 import { resolveProviderKey } from "@/lib/providers/resolveProviderKey";
 
@@ -81,7 +81,7 @@ export async function POST(
       valid = res.status !== 401 && res.status !== 403;
       if (!valid) probeMessage = "API key rejected by Replicate (401/403)";
     } else if (id === "google") {
-      // Google AI Studio keys start with "AIza" — basic format check only
+      // Google Itera Studio keys start with "AIza" — basic format check only
       // (no free auth endpoint is available without initiating a model call)
       valid = apiKey.startsWith("AIza") && apiKey.length > 20;
       if (!valid) probeMessage = "Google AI key format looks incorrect (expected AIza...)";

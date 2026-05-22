@@ -7,6 +7,37 @@ settings:
 importers:
 
   .:
+    dependencies:
+      d3-color:
+        specifier: ^3.1.0
+        version: 3.1.0
+      d3-dispatch:
+        specifier: ^3.0.1
+        version: 3.0.1
+      d3-drag:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-ease:
+        specifier: ^3.0.1
+        version: 3.0.1
+      d3-interpolate:
+        specifier: ^3.0.1
+        version: 3.0.1
+      d3-selection:
+        specifier: ^3.0.0
+        version: 3.0.0
+      d3-timer:
+        specifier: ^3.0.1
+        version: 3.0.1
+      d3-transition:
+        specifier: ^3.0.1
+        version: 3.0.1(d3-selection@3.0.0)
+      d3-zoom:
+        specifier: ^3.0.0
+        version: 3.0.0
+      use-sync-external-store:
+        specifier: ^1.6.0
+        version: 1.6.0(react@19.2.4)
     devDependencies:
       '@types/node':
         specifier: ^22.10.5
@@ -23,21 +54,21 @@ importers:
 
   apps/web:
     dependencies:
-      '@aistudio/crypto':
-        specifier: workspace:*
-        version: link:../../packages/crypto
-      '@aistudio/db':
-        specifier: workspace:*
-        version: link:../../packages/db
-      '@aistudio/engine':
-        specifier: workspace:*
-        version: link:../../packages/engine
-      '@aistudio/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
       '@ioredis/commands':
         specifier: ^1.5.0
         version: 1.5.0
+      '@iterastudio/crypto':
+        specifier: workspace:*
+        version: link:../../packages/crypto
+      '@iterastudio/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@iterastudio/engine':
+        specifier: workspace:*
+        version: link:../../packages/engine
+      '@iterastudio/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@xyflow/react':
         specifier: ^12.10.1
         version: 12.10.1(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -183,7 +214,7 @@ importers:
 
   packages/adapters:
     dependencies:
-      '@aistudio/shared':
+      '@iterastudio/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -224,7 +255,7 @@ importers:
 
   packages/engine:
     dependencies:
-      '@aistudio/shared':
+      '@iterastudio/shared':
         specifier: workspace:*
         version: link:../shared
       sharp:
@@ -253,13 +284,13 @@ importers:
 
   packages/worker:
     dependencies:
-      '@aistudio/db':
+      '@iterastudio/db':
         specifier: workspace:*
         version: link:../db
-      '@aistudio/engine':
+      '@iterastudio/engine':
         specifier: workspace:*
         version: link:../engine
-      '@aistudio/shared':
+      '@iterastudio/shared':
         specifier: workspace:*
         version: link:../shared
       bullmq:
@@ -1759,6 +1790,7 @@ packages:
   prebuild-install@7.1.3:
     resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
     engines: {node: '>=10'}
+    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
     hasBin: true
 
   prettier@3.8.1:

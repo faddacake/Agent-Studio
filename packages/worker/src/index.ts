@@ -1,10 +1,10 @@
 import { Worker, Queue } from "bullmq";
-import { getDb, closeDb, checkpoint } from "@aistudio/db";
+import { getDb, closeDb, checkpoint } from "@iterastudio/db";
 import { processNodeJob, type NodeJobData, type NodeJobResult } from "./nodeJobProcessor.js";
 import { processExportJob, type ExportJobProcessorData } from "./exportJobProcessor.js";
 import { startScheduler } from "./scheduler.js";
 
-const REDIS_URL = process.env.REDIS_URL || "redis://redis:6379";
+const REDIS_URL = process.env.REDIS_URL || "redis://127.0.0.1:6379";
 const redisConnection = { url: REDIS_URL };
 
 // --- Queues (also used by the API server to enqueue jobs) ---

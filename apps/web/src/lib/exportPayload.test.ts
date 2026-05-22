@@ -5,7 +5,7 @@
  * drops UI-only data, and preserves ordering, transitions, fade windows,
  * and overlay payloads correctly for all scene-type combinations.
  *
- * Run with: pnpm --filter @aistudio/web test:lib
+ * Run with: pnpm --filter /web test:lib
  */
 
 import { describe, it } from "node:test";

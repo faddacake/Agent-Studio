@@ -2,8 +2,8 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { getDb, schema } from "@aistudio/db";
-import { WorkflowGraphSchema } from "@aistudio/shared";
+import { getDb, schema } from "@iterastudio/db";
+import { WorkflowGraphSchema } from "@iterastudio/shared";
 
 // POST /api/workflows/import — create a new workflow from an exported definition
 export async function POST(request: NextRequest) {

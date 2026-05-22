@@ -18,7 +18,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { zipSync } from "fflate";
 import { and, eq } from "drizzle-orm";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { extractImageRefs } from "@/lib/artifactRefs";
 import { ARTIFACTS_DIR } from "@/lib/artifactStorage";
 

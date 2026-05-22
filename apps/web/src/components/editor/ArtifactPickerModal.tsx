@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { ArtifactRef } from "@aistudio/shared";
+import type { ArtifactRef } from "@iterastudio/shared";
 import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 
 // ── Types matching API shapes ─────────────────────────────────────────────────

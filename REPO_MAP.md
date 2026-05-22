@@ -1,4 +1,4 @@
-# AI Studio Repository Map
+# Itera Studio Repository Map
 
 This file describes the repository layout so AI agents do not need to scan the entire codebase.
 

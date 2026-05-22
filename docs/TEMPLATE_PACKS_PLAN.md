@@ -6,7 +6,7 @@ Date: 2026-03-08
 
 ## 1. Overview
 
-Template packs are bundles of pre-built workflow templates that can be installed in AI Studio without a hosted marketplace. They provide ready-to-use workflow graphs that users can load into the canvas editor.
+Template packs are bundles of pre-built workflow templates that can be installed in Itera Studio without a hosted marketplace. They provide ready-to-use workflow graphs that users can load into the canvas editor.
 
 ### Design Principles
 
@@ -144,7 +144,7 @@ A "Template Gallery" modal showing `templatePackLoader.getAllTemplates()` groupe
 "Save as Template" button in the canvas top bar opens a dialog where the user provides name, description, category, and tags. The current `WorkflowGraph` is read from the Zustand store, wrapped in a `TemplatePack` with `source = "user"`, auto-derived `requiredNodeTypes` and `requiredProviders`, and downloaded as a JSON file. Also auto-registered into gallery and persisted to localStorage (Session 17).
 
 ### Pack persistence — DONE (Session 17)
-`templatePackStorage.ts` in `apps/web/src/lib/` provides `rehydratePersistedPacks()`, `persistPack()`, and `removePersistedPack()`. Packs are stored under `aiStudio.templatePacks` in localStorage as a JSON array. On gallery mount, persisted packs are validated via `parseTemplatePack()` and registered into `templatePackLoader`. Built-in packs are skipped (always loaded from static imports). Invalid packs are silently dropped.
+`templatePackStorage.ts` in `apps/web/src/lib/` provides `rehydratePersistedPacks()`, `persistPack()`, and `removePersistedPack()`. Packs are stored under `iteraStudio.templatePacks` in localStorage as a JSON array. On gallery mount, persisted packs are validated via `parseTemplatePack()` and registered into `templatePackLoader`. Built-in packs are skipped (always loaded from static imports). Invalid packs are silently dropped.
 
 ### Pack management UI (future)
 Add ability to delete persisted packs from the gallery (calls `removePersistedPack()` + `templatePackLoader.unregister()`). No server persistence yet.

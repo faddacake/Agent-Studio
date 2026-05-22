@@ -34,7 +34,7 @@
             "label": "Scene Prompt",
             "params": {
               "__nodeType": "prompt-template",
-              "template": "A cinematic {{style}} shot of {{subject}}, high quality, vivid colors, social media ready"
+              "template": "A cinematic aerial shot of tropical turquoise ocean waves crashing on a sandy beach at golden hour, vivid colors, social media ready, vertical 9:16"
             },
             "retryCount": 0,
             "timeoutMs": 15000
@@ -129,7 +129,7 @@
             "label": "Product Prompt",
             "params": {
               "__nodeType": "prompt-template",
-              "template": "A professional product photo of {{product}}, studio lighting, clean white background, commercial quality, sharp focus"
+              "template": "A sleek silver smartwatch with a sapphire display on a clean white background, studio lighting, sharp focus, commercial product photography"
             },
             "retryCount": 0,
             "timeoutMs": 15000
@@ -249,7 +249,7 @@
             "label": "Scene Prompt",
             "params": {
               "__nodeType": "prompt-template",
-              "template": "A {{mood}} scene of {{setting}}, cinematic lighting, wide establishing shot, 16:9"
+              "template": "A misty mountain valley at dawn, fog rolling through ancient pine trees, cinematic wide establishing shot, moody and atmospheric"
             },
             "retryCount": 0,
             "timeoutMs": 15000

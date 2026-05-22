@@ -6,7 +6,7 @@
  * there is only one node; the prompt is passed via params.prompt so that
  * executeBestOfN can find it even without an upstream prompt node.
  */
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 
 export interface BestOfNConfig {
   prompt: string;

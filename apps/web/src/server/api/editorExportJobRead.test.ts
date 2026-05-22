@@ -13,7 +13,7 @@
  *   - payload is not present in the public response shape
  *   - future-safe: status field is present for worker/queue updates
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it, before } from "node:test";
@@ -21,11 +21,11 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { schema } from "@aistudio/db";
+import { schema } from "@iterastudio/db";
 import { ARTIFACTS_DIR } from "../../lib/artifactStorage";
 
 import { createEditorExportJob, getEditorExportJob, setExportJobRenderResult, claimExportJob, markExportJobCompleted, markExportJobFailed } from "./editorExportJobs";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── In-memory DB setup ────────────────────────────────────────────────────────
 

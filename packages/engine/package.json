@@ -1,5 +1,5 @@
 {
-  "name": "@aistudio/engine",
+  "name": "@iterastudio/engine",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -17,7 +17,7 @@
     "lint": "echo 'no lint configured yet'"
   },
   "dependencies": {
-    "@aistudio/shared": "workspace:*",
+    "@iterastudio/shared": "workspace:*",
     "sharp": "^0.34.5"
   },
   "devDependencies": {

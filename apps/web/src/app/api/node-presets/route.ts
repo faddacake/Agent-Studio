@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { eq } from "drizzle-orm";
 
 // GET /api/node-presets?nodeType=<type> — list presets, optionally filtered by node type

@@ -1,6 +1,6 @@
-# AI Studio Events and Logging
+# Itera Studio Events and Logging
 
-This document explains how events and logging should work across the AI Studio engine and app.
+This document explains how events and logging should work across the Itera Studio engine and app.
 
 ## Purpose
 

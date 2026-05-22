@@ -1,7 +1,7 @@
 /**
  * Unit tests for workflowStore – replayRunId lifecycle.
  *
- * Run: pnpm --filter @aistudio/web test:store
+ * Run: pnpm --filter /web test:store
  */
 
 import { describe, test, before, beforeEach, after } from "node:test";

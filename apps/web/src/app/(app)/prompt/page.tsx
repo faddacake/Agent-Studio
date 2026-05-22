@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from "react";
 import Link from "next/link";
 import { type ModelCategory, getModelsByCategory, getDefaultModels, estimateCost, getModelById, getModelsWithinBudget } from "@/config/models";
 import { PRESETS, getPresetById, type PromptPreset } from "@/config/presets";
@@ -43,7 +43,7 @@ export default function PromptStudioPage() {
   const runner = usePromptRunner();
   const social = useSocialVariants();
   const exporter = useExportBundle();
-  const { tier, limits } = useLicenseTier();
+  const { limits } = useLicenseTier();
   const models = useMemo(() => getModelsByCategory(category), [category]);
   const parsedBudget = maxBudget ? parseFloat(maxBudget) : null;
   const hasBudget = parsedBudget !== null && parsedBudget > 0 && !isNaN(parsedBudget);
@@ -117,27 +117,14 @@ export default function PromptStudioPage() {
     });
   }, [models]);
 
-const handleGenerateSocial = useCallback(() => {
-  console.log("[SOCIAL BUTTON CLICKED]");
-  const winner = runner.results.find((r) => r.modelId === runner.winnerId && r.outputUrl);
-  const firstCompleted = runner.results.find((r) => r.status === "completed" && r.outputUrl);
-  const target = winner || firstCompleted;
-
-  if (!target?.outputUrl) {
-    console.log("[social] no target outputUrl", {
-      winnerId: runner.winnerId,
-      results: runner.results.map((r) => ({
-        id: r.modelId,
-        status: r.status,
-        hasUrl: !!r.outputUrl,
-      })),
-    });
-    return;
-  }
-
-  const topic = prompt.split(/\s+/).slice(0, 5).join(" ") || "AI generated content";
-  social.generate(prompt, target.outputUrl, topic);
-}, [runner.results, runner.winnerId, prompt, social]);
+  const handleGenerateSocial = useCallback(() => {
+    if (!prompt.trim()) return;
+    const winner = runner.results.find((r) => r.modelId === runner.winnerId && r.outputUrl);
+    const firstCompleted = runner.results.find((r) => r.status === "completed" && r.outputUrl);
+    const target = winner || firstCompleted;
+    const topic = prompt.split(/\s+/).slice(0, 5).join(" ") || "AI generated content";
+    social.generate(prompt, target?.outputUrl ?? "", topic);
+  }, [runner.results, runner.winnerId, prompt, social]);
 
   const handleTabChange = useCallback((tab: ResultsTab) => {
     setResultsTab(tab);
@@ -145,6 +132,23 @@ const handleGenerateSocial = useCallback(() => {
       handleGenerateSocial();
     }
   }, [social.status, handleGenerateSocial]);
+
+  // When a run finishes while the Social tab is already showing, upgrade from
+  // image-free variants (generated before the run completed) to image-backed
+  // ones now that outputUrl is available. Only fires on status transition.
+  useEffect(() => {
+    if (runner.overallStatus !== "completed" || resultsTab !== "social") return;
+    if (social.status !== "loaded") return;
+    const hasNoImages = !social.images || Object.values(social.images).every((u) => !u);
+    if (!hasNoImages) return;
+    const winner = runner.results.find((r) => r.modelId === runner.winnerId && r.outputUrl);
+    const firstCompleted = runner.results.find((r) => r.status === "completed" && r.outputUrl);
+    const target = winner || firstCompleted;
+    if (!target?.outputUrl) return;
+    const topic = prompt.split(/\s+/).slice(0, 5).join(" ") || "AI generated content";
+    social.generate(prompt, target.outputUrl, topic);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runner.overallStatus]);
 
   const handleExport = useCallback(() => {
     // Resolve the best available image URL from three sources:
@@ -230,17 +234,23 @@ const handleGenerateSocial = useCallback(() => {
   }, [runner.results, runner.winnerId, prompt, social.variants, social.images]);
 
   const handleRun = useCallback(() => {
+    social.reset();
+    setResultsTab("results");
+    setShowCompare(false);
     const toRun = selectedModels.filter(Boolean) as any[];
     if (toRun.length > 0) runner.run(prompt, toRun);
-  }, [prompt, selectedModels, runner]);
+  }, [prompt, selectedModels, runner, social]);
 
   const handleRunAll = useCallback(() => {
+    social.reset();
+    setResultsTab("results");
+    setShowCompare(false);
     const all = models.filter((m) => m.supported);
     if (all.length > 0) {
       setSelected(new Set(all.map((m) => m.id)));
       runner.run(prompt, all);
     }
-  }, [prompt, models, runner]);
+  }, [prompt, models, runner, social]);
 
   return (
     <div style={{ padding: "28px 32px", maxWidth: 1100, marginLeft: "auto", marginRight: "auto" }}>

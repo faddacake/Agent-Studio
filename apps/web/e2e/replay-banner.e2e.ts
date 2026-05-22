@@ -5,7 +5,7 @@
  * Only the replay run dispatch POST is intercepted; all other requests
  * hit the real running app.
  *
- * Run: pnpm --filter @aistudio/web test:e2e
+ * Run: pnpm --filter /web test:e2e
  */
 
 import { test, expect } from "@playwright/test";

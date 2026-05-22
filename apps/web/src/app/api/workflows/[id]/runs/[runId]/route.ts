@@ -20,7 +20,7 @@ export const runtime = "nodejs";
  */
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 
 export async function GET(
   _req: Request,

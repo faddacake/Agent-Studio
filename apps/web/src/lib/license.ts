@@ -1,4 +1,4 @@
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { eq } from "drizzle-orm";
 
 export type { LicenseTier, TierLimits } from "./license-tiers";

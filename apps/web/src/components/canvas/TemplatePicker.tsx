@@ -88,6 +88,7 @@ export function TemplatePicker({ open, onClose, onSelect, refreshKey = 0 }: Temp
 
   useEffect(() => {
     ensurePacksLoaded();
+    setImportCount((c) => c + 1);
   }, []);
 
   // Fetch user-saved DB templates and register them as a synthetic "user" pack

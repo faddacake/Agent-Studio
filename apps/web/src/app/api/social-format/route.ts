@@ -7,7 +7,7 @@ import {
   PLATFORM_IMAGE_SPECS,
   type PlatformId,
 } from "@/services/socialFormatter";
-import { formatForPlatform, type Platform, type FormatOutput } from "@aistudio/shared";
+import { formatForPlatform, type Platform, type FormatOutput } from "@iterastudio/shared";
 
 const PLATFORM_MAP: Record<PlatformId, Platform> = {
   instagram: "instagram",

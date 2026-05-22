@@ -271,4 +271,55 @@ describe("getFeaturedTemplates", () => {
     const featured = loader.getFeaturedTemplates(10);
     assert.equal(featured[0].preview, "A great template");
   });
+
+  it("populates defaultPrompt from manifest.defaultPrompts", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack({
+      manifest: {
+        id: "pack-e",
+        name: "Pack E",
+        version: "1.0.0",
+        source: "builtin",
+        templates: ["with-prompt", "no-prompt"],
+        defaultPrompts: { "with-prompt": "Example prompt text" },
+        featuredTemplates: ["with-prompt", "no-prompt"],
+      },
+      templates: {
+        "with-prompt": { version: 1, nodes: [], edges: [] },
+        "no-prompt": { version: 1, nodes: [], edges: [] },
+      },
+    });
+    loader.register(pack);
+
+    const featured = loader.getFeaturedTemplates(10);
+    assert.equal(featured[0].defaultPrompt, "Example prompt text");
+    assert.equal(featured[1].defaultPrompt, undefined);
+  });
+});
+
+describe("getAllTemplates", () => {
+  it("populates defaultPrompt from manifest.defaultPrompts", () => {
+    const loader = new TemplatePackLoader();
+    const pack = parseTemplatePack({
+      manifest: {
+        id: "pack-f",
+        name: "Pack F",
+        version: "1.0.0",
+        source: "builtin",
+        templates: ["t1", "t2"],
+        defaultPrompts: { t1: "Prompt for t1" },
+      },
+      templates: {
+        t1: { version: 1, nodes: [], edges: [] },
+        t2: { version: 1, nodes: [], edges: [] },
+      },
+    });
+    loader.register(pack);
+
+    const all = loader.getAllTemplates();
+    const t1 = all.find((e) => e.id === "t1");
+    const t2 = all.find((e) => e.id === "t2");
+    assert.equal(t1?.defaultPrompt, "Prompt for t1");
+    assert.equal(t2?.defaultPrompt, undefined);
+  });
 });

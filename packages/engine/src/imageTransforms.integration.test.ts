@@ -22,7 +22,7 @@ import { executeResize }        from "./local/resize.js";
 import { executeCrop }          from "./local/crop.js";
 import { executeFormatConvert } from "./local/formatConvert.js";
 
-import { isArtifactRef, type ArtifactRef, type NodeExecutionContext } from "@aistudio/shared";
+import { isArtifactRef, type ArtifactRef, type NodeExecutionContext } from "@iterastudio/shared";
 
 // ── Helpers ──
 

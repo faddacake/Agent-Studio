@@ -30,7 +30,7 @@ import {
   ensureCollection,
   isCandidateCollection,
   type CandidateCollection,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 import { RunCoordinator, type DispatchJob, type RunState } from "./runCoordinator.js";
 import { NodeExecutor } from "./executor.js";

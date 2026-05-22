@@ -38,7 +38,7 @@ import {
   type CandidateCollection,
   type CandidateSelection,
   type NodeExecutionContext,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 import { RunCoordinator, type DispatchJob, type RunState } from "./runCoordinator.js";
 import { NodeExecutor } from "./executor.js";
@@ -276,7 +276,7 @@ describe("best-of-n node receives prompt from upstream node via coordinator wiri
     }));
 
     // Patch prompt-source definition to use Local runtimeKind
-    const { NodeRuntimeKind } = await import("@aistudio/shared");
+    const { NodeRuntimeKind } = await import("@iterastudio/shared");
     const def = nodeRegistry.get("prompt-template");
     if (def) {
       nodeRegistry.register({

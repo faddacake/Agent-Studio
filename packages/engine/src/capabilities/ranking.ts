@@ -2,7 +2,7 @@ import type {
   NodeDefinition,
   NodeExecutionContext,
   NodeExecutionResult,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import {
   ensureCollection,
   isCandidateCollection,
@@ -13,7 +13,7 @@ import {
   toSelection,
   toCollection,
   attachScore,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 /** Default metric name when scores arrive as a raw array. */
 const DEFAULT_METRIC = "score";

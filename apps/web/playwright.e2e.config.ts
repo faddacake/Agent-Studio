@@ -4,7 +4,7 @@
  * Starts Next.js on an isolated port with a temporary DATA_DIR so tests
  * never touch the developer's local database.
  *
- * Run: pnpm --filter @aistudio/web test:e2e
+ * Run: pnpm --filter /web test:e2e
  */
 
 import { defineConfig, devices } from "@playwright/test";

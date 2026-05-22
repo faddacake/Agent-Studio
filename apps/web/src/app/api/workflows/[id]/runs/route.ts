@@ -10,7 +10,7 @@ export const runtime = "nodejs";
  */
 import { randomUUID } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { desc, eq } from "drizzle-orm";
 import path from "node:path";
 
@@ -22,14 +22,14 @@ import {
   createVideoGenerator,
   writeArtifact,
   type DispatchJob,
-} from "@aistudio/engine";
+} from "@iterastudio/engine";
 // registerCapabilityExecutors / registerLocalExecutors register on the
 // module-level nodeExecutor singleton and take no arguments.
 import {
   registerBuiltInNodes,
   nodeRegistry,
   type NodeExecutionContext,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import { getRunCoordinator } from "@/lib/runCoordinator";
 import { initializeNodeRegistry } from "@/lib/nodeRegistryInit";
 import { resolveProviderKey } from "@/lib/providers/resolveProviderKey";
@@ -54,13 +54,13 @@ function ensureEngineBootstrapped(): void {
       const providerId = context.providerId ?? definition.provider?.providerId ?? "fal";
       const modelId = context.modelId ?? definition.provider?.modelId;
 
-      // __apiKey is injected in makeDispatch() after DB lookup; fall back to the
-      // provider-specific env var.  If neither is present the provider is not
-      // configured — fail clearly.
+      // __apiKey is injected by makeDispatch() after DB lookup; fall back to the
+      // provider-specific env var.  Trim whitespace so keys with accidental
+      // trailing spaces (e.g. from .env.local) don't silently fail.
       // Map is exhaustive: unknown providers get undefined, not the fal key by accident.
       const ENV_KEYS: Record<string, string | undefined> = {
-        fal:       process.env.FAL_API_KEY,
-        replicate: process.env.REPLICATE_API_TOKEN,
+        fal:       process.env.FAL_API_KEY?.trim()              || undefined,
+        replicate: process.env.REPLICATE_API_TOKEN?.trim()      || undefined,
       };
       const apiKey =
         (context.params.__apiKey as string | undefined) ?? ENV_KEYS[providerId];
@@ -160,21 +160,83 @@ function makeDispatch(runId: string, outputDir: string): DispatchJob {
   const coordinator = getRunCoordinator();
 
   const dispatch: DispatchJob = async (job) => {
-    // Mark node as running
-    const run = coordinator.getRun(runId);
-    const nodeState = run.nodeStates.get(job.nodeId);
-    if (nodeState) {
-      nodeState.status = "running";
-      nodeState.startedAt = Date.now();
-    }
+    // Mark node as running and emit node:started so the SSE stream updates in real time.
+    coordinator.onNodeStarted(job.runId, job.nodeId);
 
     try {
-      // Resolve provider API key from DB (DB config takes precedence over env).
-      // Falls back to null — the provider executor will use env var as fallback.
-      const resolvedProviderId = job.providerId;
-      const resolvedKey = resolvedProviderId
-        ? resolveProviderKey(resolvedProviderId)
-        : null;
+      // Resolve provider ID through a three-level fallback chain:
+      //   1. job.providerId — set explicitly for canvas provider nodes that have
+      //      providerId in their graph data (e.g. from the InspectorPanel picker).
+      //   2. job.params.provider — used by capability nodes like "best-of-n" which
+      //      store their provider choice in params rather than on the job directly.
+      //   3. NodeDefinition.provider.providerId — covers canvas provider nodes whose
+      //      graph JSON does NOT include an explicit providerId (the common case for
+      //      default-configured nodes; the provider lives only in the registry).
+      //
+      // Normalize falsy strings (e.g. "" from Prompt Studio graph nodes that set
+      // data.providerId = "" as a placeholder) to undefined so level 3 fires correctly.
+      const normalizedProviderId =
+        job.providerId && job.providerId.length > 0 ? job.providerId : undefined;
+      const resolvedProviderId: string | undefined =
+        normalizedProviderId ??
+        (typeof (job.params as Record<string, unknown>)?.provider === "string" &&
+        ((job.params as Record<string, unknown>).provider as string).length > 0
+          ? (job.params as Record<string, unknown>).provider as string
+          : undefined) ??
+        nodeRegistry.get(job.nodeType)?.provider?.providerId;
+
+      // Resolve API key: DB (Settings → Providers) takes precedence, env var is
+      // the fallback.  Both are tried at the dispatch layer so __apiKey is always
+      // injected when a key exists from any source — without relying on each
+      // individual executor to implement its own fallback chain.
+      //
+      // Keys are trimmed here to handle common .env.local formatting mistakes
+      // (e.g. "FAL_API_KEY= abc..." with a leading space after the equals sign).
+      const ENV_KEY_MAP: Record<string, string | undefined> = {
+        fal:       process.env.FAL_API_KEY?.trim()         || undefined,
+        replicate: process.env.REPLICATE_API_TOKEN?.trim() || undefined,
+        google:    process.env.GOOGLE_API_KEY?.trim()      || undefined,
+      };
+      let resolvedKey: string | null = null;
+      let keySource = "none";
+      if (resolvedProviderId) {
+        const dbKey = resolveProviderKey(resolvedProviderId);
+        if (dbKey) {
+          resolvedKey = dbKey;
+          keySource = "db";
+        } else {
+          const envKey = ENV_KEY_MAP[resolvedProviderId] ?? null;
+          if (envKey) {
+            resolvedKey = envKey;
+            keySource = "env";
+            console.log(`[dispatch] Using env var key for provider "${resolvedProviderId}" (no DB row found).`);
+          }
+        }
+      }
+
+      const resolvedModelId =
+        (job.modelId && job.modelId.length > 0 ? job.modelId : undefined) ??
+        nodeRegistry.get(job.nodeType)?.provider?.modelId;
+
+      console.log(
+        `[dispatch] node=${job.nodeId.slice(0, 8)} type=${job.nodeType} ` +
+        `provider=${resolvedProviderId ?? "none"} model=${resolvedModelId ?? "default"} key=${keySource}`,
+      );
+
+      // Warn early when a provider node has no key so the error context is clear
+      // in the logs (the executor will throw, but this message names the specific
+      // provider and env var needed to fix it).
+      if (resolvedProviderId && keySource === "none") {
+        const envVarHint =
+          resolvedProviderId === "fal" ? "FAL_API_KEY" :
+          resolvedProviderId === "replicate" ? "REPLICATE_API_TOKEN" :
+          `${resolvedProviderId.toUpperCase()}_API_KEY`;
+        console.warn(
+          `[dispatch] No API key for provider "${resolvedProviderId}" ` +
+          `(node type: ${job.nodeType}). ` +
+          `Configure it in Settings → Providers or set ${envVarHint} in the environment.`,
+        );
+      }
 
       // Resolve LLM provider key for agent/ReAct/SubAgent nodes.
       // These nodes store their provider in params.provider and their key in
@@ -198,8 +260,11 @@ function makeDispatch(runId: string, outputDir: string): DispatchJob {
           // Inject resolved LLM key when the node itself has no key configured.
           ...(resolvedLLMKey ? { apiKey: resolvedLLMKey } : {}),
         },
-        providerId: job.providerId,
-        modelId: job.modelId,
+        // Use resolvedProviderId/resolvedModelId (three-level fallback each) rather
+        // than raw job values so the executor always receives the correct provider
+        // and model even when graph nodes omit them (common for template nodes).
+        providerId: resolvedProviderId,
+        modelId: resolvedModelId,
         outputDir,
         // Wire agent step callback: stores each T/A/O step on NodeState and
         // emits an agent:step event so the SSE stream updates in real time.

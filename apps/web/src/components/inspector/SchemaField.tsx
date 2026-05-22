@@ -1,6 +1,6 @@
 "use client";
 
-import type { NodeParameterField } from "@aistudio/shared";
+import type { NodeParameterField } from "@iterastudio/shared";
 
 interface SchemaFieldProps {
   field: NodeParameterField;

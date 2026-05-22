@@ -9,12 +9,15 @@ export interface WorkflowEmptyStateProps {
   onSelectTemplate: (graph: WorkflowGraph, name: string) => void;
   onOpenGallery: () => void;
   onStartBlank: () => void;
+  /** Pixels from canvas top to clear the toolbar. Defaults to 80. */
+  topOffset?: number;
 }
 
 export function WorkflowEmptyState({
   onSelectTemplate,
   onOpenGallery,
   onStartBlank,
+  topOffset = 80,
 }: WorkflowEmptyStateProps) {
   const [ready, setReady] = useState(false);
 
@@ -27,8 +30,26 @@ export function WorkflowEmptyState({
     ? templatePackLoader.getFeaturedTemplates(4)
     : [];
 
+  const handleFeaturedSelect = (entry: TemplateEntry, displayName: string) => {
+    let graph = entry.graph;
+    if (entry.defaultPrompt) {
+      const idx = graph.nodes.findIndex((n) => n.type === "prompt-template");
+      if (idx !== -1) {
+        graph = {
+          ...graph,
+          nodes: graph.nodes.map((n, i) =>
+            i === idx
+              ? { ...n, data: { ...n.data, params: { ...n.data.params, template: entry.defaultPrompt } } }
+              : n,
+          ),
+        };
+      }
+    }
+    onSelectTemplate(graph, displayName);
+  };
+
   return (
-    <div className="pointer-events-auto absolute inset-0 z-10 flex items-center justify-center">
+    <div className="pointer-events-auto absolute inset-0 z-10 flex items-start justify-center" style={{ paddingTop: topOffset }}>
       <div className="mx-4 w-full max-w-2xl rounded-xl border border-neutral-700 bg-neutral-900/95 shadow-2xl backdrop-blur-sm">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-neutral-800 px-6 py-4">
@@ -37,7 +58,7 @@ export function WorkflowEmptyState({
               Start from a template
             </h2>
             <p className="mt-0.5 text-xs text-neutral-500">
-              Pick a template below or build from scratch
+              Choose a template to get started, or build from scratch
             </p>
           </div>
           <button
@@ -61,11 +82,12 @@ export function WorkflowEmptyState({
               No featured templates found.
             </p>
           )}
-          {featured.map((entry) => (
+          {featured.map((entry, i) => (
             <FeaturedCard
               key={`${entry.packId}/${entry.id}`}
               entry={entry}
-              onSelect={onSelectTemplate}
+              recommended={i === 0}
+              onSelect={handleFeaturedSelect}
             />
           ))}
         </div>
@@ -90,10 +112,12 @@ export function WorkflowEmptyState({
 
 function FeaturedCard({
   entry,
+  recommended,
   onSelect,
 }: {
   entry: TemplateEntry;
-  onSelect: (graph: WorkflowGraph, name: string) => void;
+  recommended?: boolean;
+  onSelect: (entry: TemplateEntry, name: string) => void;
 }) {
   const displayName = formatTemplateName(entry.id);
   const nodeCount = entry.graph.nodes.length;
@@ -101,7 +125,14 @@ function FeaturedCard({
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-neutral-800 bg-neutral-800/40 p-4 transition-colors hover:border-neutral-600 hover:bg-neutral-800/70">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium text-neutral-200">{displayName}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-neutral-200">{displayName}</span>
+          {recommended && (
+            <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-emerald-400">
+              Start here
+            </span>
+          )}
+        </div>
         <span className="shrink-0 text-[10px] text-neutral-600">
           {nodeCount} node{nodeCount !== 1 ? "s" : ""}
         </span>
@@ -115,7 +146,7 @@ function FeaturedCard({
 
       <button
         type="button"
-        onClick={() => onSelect(entry.graph, displayName)}
+        onClick={() => onSelect(entry, displayName)}
         className="mt-1 w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 active:bg-blue-700"
       >
         Use Template

@@ -7,7 +7,7 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { isArtifactRef, type ArtifactRef } from "@aistudio/shared";
+import { isArtifactRef, type ArtifactRef } from "@iterastudio/shared";
 
 // ── MIME type map (sharp format name → MIME string) ──
 

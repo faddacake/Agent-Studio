@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
-import type { WorkflowNode } from "@aistudio/shared";
-import { nodeRegistry, validateParams } from "@aistudio/shared";
+import type { WorkflowNode } from "@iterastudio/shared";
+import { nodeRegistry, validateParams } from "@iterastudio/shared";
 import { initializeNodeRegistry } from "@/lib/nodeRegistryInit";
 import { SchemaForm } from "./SchemaForm";
 

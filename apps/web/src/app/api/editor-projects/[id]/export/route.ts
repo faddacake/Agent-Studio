@@ -18,7 +18,7 @@ import { getEditorProject } from "@/server/api/editorProjects";
 import { createEditorExportJob } from "@/server/api/editorExportJobs";
 import { buildRenderPlan } from "@/lib/renderPlan";
 import { buildExportPayload } from "@/lib/exportPayload";
-import { ExportJobPayloadSchema } from "@aistudio/shared";
+import { ExportJobPayloadSchema } from "@iterastudio/shared";
 import { enqueueExportJob } from "@/lib/queues/exportJobsQueue";
 
 export async function POST(

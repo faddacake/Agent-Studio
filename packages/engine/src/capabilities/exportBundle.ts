@@ -4,12 +4,12 @@ import type {
   NodeExecutionResult,
   CandidateItem,
   CandidateCollection,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import {
   ensureCollection,
   getScore,
   toCollection,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 // ── Export manifest types ──
 

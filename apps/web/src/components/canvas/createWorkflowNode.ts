@@ -1,7 +1,7 @@
 "use client";
 
-import type { NodeDefinition, WorkflowNode } from "@aistudio/shared";
-import { getDefaultParams, toWorkflowPorts } from "@aistudio/shared";
+import type { NodeDefinition, WorkflowNode } from "@iterastudio/shared";
+import { getDefaultParams, toWorkflowPorts } from "@iterastudio/shared";
 
 /**
  * Create a WorkflowNode from a NodeDefinition.

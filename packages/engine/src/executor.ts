@@ -4,7 +4,7 @@ import {
   type NodeDefinition,
   type NodeExecutionContext,
   type NodeExecutionResult,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 // ── Executor handler types ──
 

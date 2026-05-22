@@ -5,7 +5,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { desc, eq } from "drizzle-orm";
 import type {
   AspectRatio,

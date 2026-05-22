@@ -11,7 +11,7 @@
  * Used by the Generate page to render selected + all generated images.
  */
 import { useState, useEffect } from "react";
-import type { CandidateItem } from "@aistudio/shared";
+import type { CandidateItem } from "@iterastudio/shared";
 
 export interface RunOutputsState {
   /** Top-K selected candidates (from selection_out) */

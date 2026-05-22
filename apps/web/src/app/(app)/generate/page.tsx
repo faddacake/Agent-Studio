@@ -28,6 +28,15 @@ const RunDebuggerPanel = lazy(() =>
 
 const MAX_CHARS = 1000;
 
+const TERMINAL_STATUSES = new Set(["completed", "failed", "partial_failure", "cancelled", "budget_exceeded"]);
+
+function formatError(error: string): string {
+  if (error.includes("not configured") || error.includes("API key")) {
+    return `${error} → Add your key in Settings → Providers or set FAL_API_KEY in apps/web/.env.local.`;
+  }
+  return error;
+}
+
 type Provider = "mock" | "fal";
 
 const MODEL_OPTIONS: Record<Provider, Array<{ value: string; label: string }>> = {
@@ -52,12 +61,17 @@ export default function GeneratePage() {
     runner.runId,
   );
 
-  const isComplete = snapshot?.status === "completed";
+  const isTerminal = snapshot ? TERMINAL_STATUSES.has(snapshot.status) : false;
   const { items: resultItems, allItems } = useRunOutputs(
     runner.workflowId,
     runner.runId,
-    isComplete,
+    isTerminal,
   );
+
+  // Collect error from the first failed node so the user sees why the run failed.
+  const runFailureError = isTerminal && snapshot?.status !== "completed"
+    ? (snapshot?.nodes.find((n) => n.status === "failed" && n.error)?.error ?? null)
+    : null;
   const [allCandidatesOpen, setAllCandidatesOpen] = useState(false);
 
   const canRun =
@@ -237,6 +251,19 @@ export default function GeneratePage() {
           </div>
         </div>
 
+        {/* Provider hint when fal is selected */}
+        {provider === "fal" && (
+          <div style={{
+            padding: "8px 12px", borderRadius: 6, marginBottom: 12,
+            backgroundColor: "rgba(99,102,241,0.08)",
+            border: "1px solid rgba(99,102,241,0.2)",
+            fontSize: 12, color: "var(--color-text-secondary)",
+          }}>
+            Fal.ai requires a <code>FAL_API_KEY</code> env variable or a key configured in{" "}
+            <strong>Settings → Providers</strong>.
+          </div>
+        )}
+
         {/* Error */}
         {runner.error && (
           <div style={{
@@ -245,7 +272,7 @@ export default function GeneratePage() {
             border: "1px solid rgba(239,68,68,0.3)",
             fontSize: 13, color: "var(--color-error)",
           }}>
-            {runner.error}
+            {formatError(runner.error)}
           </div>
         )}
 
@@ -308,7 +335,19 @@ export default function GeneratePage() {
           border: "1px solid rgba(239,68,68,0.2)",
           fontSize: 13, color: "var(--color-error)",
         }}>
-          SSE: {sseError}
+          Live updates: {sseError}
+        </div>
+      )}
+
+      {/* Run execution error — from failed node */}
+      {runFailureError && (
+        <div style={{
+          padding: "10px 14px", borderRadius: 8, marginBottom: 16,
+          backgroundColor: "rgba(239,68,68,0.08)",
+          border: "1px solid rgba(239,68,68,0.2)",
+          fontSize: 13, color: "var(--color-error)",
+        }}>
+          Run failed: {formatError(runFailureError)}
         </div>
       )}
 

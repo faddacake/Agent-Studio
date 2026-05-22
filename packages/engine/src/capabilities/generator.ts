@@ -391,6 +391,11 @@ export class FalVideoGeneratorAdapter implements VideoGeneratorAdapter {
     const durationSecs = this.clampDuration(opts.duration ?? 5);
     const aspectRatio  = this.deriveAspectRatio(opts.width, opts.height);
 
+    // fal.ai video generation is synchronous but can take 2-4 minutes.
+    // Fall back to a 5-minute timeout when no AbortSignal is provided by the
+    // caller so a hung fal.ai request never leaves the node stuck in "Running".
+    const signal = opts.signal ?? AbortSignal.timeout(300_000);
+
     const body: Record<string, unknown> = {
       prompt:       opts.prompt || "abstract motion",
       duration:     String(durationSecs),
@@ -404,7 +409,7 @@ export class FalVideoGeneratorAdapter implements VideoGeneratorAdapter {
         "Content-Type": "application/json",
       },
       body:   JSON.stringify(body),
-      signal: opts.signal,
+      signal,
     });
 
     if (!response.ok) {
@@ -420,7 +425,7 @@ export class FalVideoGeneratorAdapter implements VideoGeneratorAdapter {
     }
 
     // Download the generated video to a Buffer.
-    const videoResponse = await fetch(videoInfo.url, { signal: opts.signal });
+    const videoResponse = await fetch(videoInfo.url, { signal });
     if (!videoResponse.ok) {
       throw new Error(
         `Failed to download video from Fal CDN: ${videoResponse.status}`,
@@ -481,6 +486,10 @@ export class ReplicateVideoGeneratorAdapter implements VideoGeneratorAdapter {
       input.duration = opts.duration;
     }
 
+    // Replicate's Prefer:wait caps server-side waiting at ~60 s; give 30 s of
+    // network buffer. Polling adds up to 60 s more, so max total ≈ 2.5 min.
+    const signal = opts.signal ?? AbortSignal.timeout(90_000);
+
     const [owner, name] = this.modelSlug.split("/");
     const createResponse = await fetch(
       `https://api.replicate.com/v1/models/${owner}/${name}/predictions`,
@@ -492,7 +501,7 @@ export class ReplicateVideoGeneratorAdapter implements VideoGeneratorAdapter {
           Prefer:         "wait",
         },
         body:   JSON.stringify({ input }),
-        signal: opts.signal,
+        signal,
       },
     );
 
@@ -516,14 +525,14 @@ export class ReplicateVideoGeneratorAdapter implements VideoGeneratorAdapter {
 
     // Poll if not completed within the wait window.
     if (!videoUrl && prediction.id) {
-      videoUrl = await this.pollUntilComplete(prediction.id, opts.signal);
+      videoUrl = await this.pollUntilComplete(prediction.id, signal);
     }
 
     if (!videoUrl) {
       throw new Error("Replicate video returned no output URL");
     }
 
-    const videoResponse = await fetch(videoUrl, { signal: opts.signal });
+    const videoResponse = await fetch(videoUrl, { signal });
     if (!videoResponse.ok) {
       throw new Error(
         `Failed to download video from Replicate CDN: ${videoResponse.status}`,

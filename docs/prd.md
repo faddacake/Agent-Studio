@@ -2,11 +2,11 @@
 
 ## 1. Product Overview
 
-AI Studio is a self-hostable, visual workflow-builder that lets creators and teams chain AI image and video models — such as Flux, Nano Banana, Kling, PixVerse, and Sora — into multi-step pipelines using a drag-and-drop node editor. Users bring their own API keys for inference providers (Replicate, Fal AI, etc.) and pay those providers directly for compute. The application ships as a single Docker image, stores all data locally, and requires no recurring subscription — users purchase a one-time lifetime license.
+Itera Studio is a self-hostable, visual workflow-builder that lets creators and teams chain AI image and video models — such as Flux, Nano Banana, Kling, PixVerse, and Sora — into multi-step pipelines using a drag-and-drop node editor. Users bring their own API keys for inference providers (Replicate, Fal AI, etc.) and pay those providers directly for compute. The application ships as a single Docker image, stores all data locally, and requires no recurring subscription — users purchase a one-time lifetime license.
 
 ## 2. Problem Statement
 
-Creators who want to combine multiple AI models into a single production pipeline today must write custom scripts, juggle multiple provider dashboards, and manually shuttle outputs between services. Existing tools either lock users into a single provider's ecosystem, charge per-generation markups on top of provider costs, or require significant engineering skill to orchestrate. AI Studio eliminates these pain points by providing a visual, provider-agnostic orchestration layer that runs entirely on the user's own infrastructure, with no middleman markup on compute.
+Creators who want to combine multiple AI models into a single production pipeline today must write custom scripts, juggle multiple provider dashboards, and manually shuttle outputs between services. Existing tools either lock users into a single provider's ecosystem, charge per-generation markups on top of provider costs, or require significant engineering skill to orchestrate. Itera Studio eliminates these pain points by providing a visual, provider-agnostic orchestration layer that runs entirely on the user's own infrastructure, with no middleman markup on compute.
 
 ## 3. Target Users
 
@@ -28,18 +28,18 @@ Creators who want to combine multiple AI models into a single production pipelin
 
 ## 5. Non-Goals
 
-- **Training or fine-tuning models**: AI Studio orchestrates inference only; it does not train, fine-tune, or host models.
+- **Training or fine-tuning models**: Itera Studio orchestrates inference only; it does not train, fine-tune, or host models.
 - **Building a model marketplace**: The product does not curate, rank, or sell access to models. It connects to providers the user already has accounts with.
 - **Real-time collaborative editing**: V1 does not support multiple users editing the same workflow simultaneously (Google-Docs-style). Collaboration is via sharing/importing workflows.
 - **Mobile-native app**: The UI is a responsive web application, not a native iOS/Android app.
-- **Replacing provider dashboards**: AI Studio does not replicate billing management, usage analytics, or account settings that providers already offer.
+- **Replacing provider dashboards**: Itera Studio does not replicate billing management, usage analytics, or account settings that providers already offer.
 - **Hosting inference compute**: The product never runs model inference itself. All compute happens on third-party provider infrastructure.
 - **LLM chat / text-generation workflows**: V1 focuses exclusively on image and video generation models. Text/LLM orchestration is out of scope.
 
 ## 6. User Stories & Acceptance Criteria
 
 ### US-1: Connect a Provider API Key
-**As a** user, **I want to** add my Replicate API key to AI Studio **so that** I can run models hosted on Replicate.
+**As a** user, **I want to** add my Replicate API key to Itera Studio **so that** I can run models hosted on Replicate.
 
 - **Given** I am on the Settings > Providers page,
 - **When** I enter a valid Replicate API key and click Save,
@@ -81,7 +81,7 @@ Creators who want to combine multiple AI models into a single production pipelin
 - **Then** a pre-configured workflow loads on the canvas with placeholder inputs and sensible default parameters.
 
 ### US-7: Export and Import a Workflow
-**As a** team lead, **I want to** export a workflow as a JSON file and share it with teammates **so that** they can import and run it in their own AI Studio instance.
+**As a** team lead, **I want to** export a workflow as a JSON file and share it with teammates **so that** they can import and run it in their own Itera Studio instance.
 
 - **Given** I have a working workflow,
 - **When** I click Export > Download JSON,
@@ -102,11 +102,11 @@ Creators who want to combine multiple AI models into a single production pipelin
 - **Then** I see a chronological list of runs with status, duration, total cost, and thumbnail previews of outputs.
 
 ### US-10: Self-Host via Docker
-**As a** technically savvy user, **I want to** deploy AI Studio on my own server using Docker **so that** I maintain full control over my data.
+**As a** technically savvy user, **I want to** deploy Itera Studio on my own server using Docker **so that** I maintain full control over my data.
 
 - **Given** I have Docker installed on a Linux server,
 - **When** I run `docker compose up` with the provided compose file,
-- **Then** AI Studio starts, is accessible on the configured port, and persists data to a mounted volume.
+- **Then** Itera Studio starts, is accessible on the configured port, and persists data to a mounted volume.
 
 ## 7. MVP Scope
 
@@ -270,7 +270,7 @@ interface ProviderAdapter {
 - Keys are never logged, never included in error reports, and never returned in API responses after initial storage.
 
 ### Transport Security
-- All communication between the browser and the AI Studio backend must occur over HTTPS (enforced via reverse proxy in production deployments).
+- All communication between the browser and the Itera Studio backend must occur over HTTPS (enforced via reverse proxy in production deployments).
 - All outbound API calls to providers use HTTPS.
 
 ### User Isolation (Post-MVP)
@@ -282,7 +282,7 @@ interface ProviderAdapter {
 - Logs are stored locally and are not transmitted externally.
 
 ### Provider TOS Compliance
-- AI Studio documentation includes a disclaimer that users are responsible for complying with each provider's Terms of Service.
+- Itera Studio documentation includes a disclaimer that users are responsible for complying with each provider's Terms of Service.
 - The application does not circumvent any provider rate limits or access controls.
 
 ### Dependency Security
@@ -385,7 +385,7 @@ interface ProviderAdapter {
 ### Optional Paid Services
 - **Priority support**: Paid support plans with guaranteed response times.
 - **Custom adapter development**: Paid service to build adapters for providers not yet supported.
-- **Managed hosting**: A hosted version of AI Studio for users who don't want to self-host (post-MVP, if demand warrants).
+- **Managed hosting**: A hosted version of Itera Studio for users who don't want to self-host (post-MVP, if demand warrants).
 
 ### Licensing Strategy
 - Initial release under a **source-available license** (Fair Source / BSL-style): code is inspectable and modifiable but commercial redistribution is restricted.
@@ -425,7 +425,7 @@ interface ProviderAdapter {
 | **Pricing model doesn't sustain development** | Insufficient revenue | Medium | Validate pricing with early adopters; add optional recurring services (support, managed hosting) |
 | **Security breach of stored API keys** | User API keys compromised | Low | AES-256-GCM encryption; keys never leave the user's server; security audit before launch |
 | **Scope creep delays MVP** | Launch date slips | High | Strict MVP scope; weekly scope reviews; defer all post-MVP features ruthlessly |
-| **Model output quality varies across providers** | Users blame AI Studio for poor results | Medium | Clear attribution to provider/model; expose raw parameters; provide comparison tools |
+| **Model output quality varies across providers** | Users blame Itera Studio for poor results | Medium | Clear attribution to provider/model; expose raw parameters; provide comparison tools |
 
 ## 20. Metrics & Telemetry
 

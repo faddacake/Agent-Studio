@@ -3,7 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

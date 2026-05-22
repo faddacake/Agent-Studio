@@ -14,7 +14,7 @@
  *   - adapter accepts only the validated ExportJobPayload contract (no DB row, no queue data)
  *   - multi-scene payload produces correct sceneCount
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it } from "node:test";
@@ -25,7 +25,7 @@ import fs from "node:fs";
 import { renderExportJob, getExportJobRenderer } from "./editorExportJobRenderer";
 import { realExportJobRenderer, buildRealRendererResult, normalizeRealRendererInput, buildRealRenderPlan, buildRealRenderArtifactDescriptor, buildRealRenderArtifactPath, buildRealRenderArtifactIdentity, assembleRealRendererResult, writeRealRenderArtifactFile, buildFfmpegArgs, REAL_RENDER_ARTIFACT_FILENAME, REAL_PREVIEW_ARTIFACT_FILENAME, PREVIEW_MAX_DURATION_MS, PREVIEW_HEIGHT_PX, PREVIEW_CRF, PREVIEW_PRESET, FULL_HEIGHT_PX, FULL_CRF, FULL_PRESET, clampScenesToDuration } from "./editorExportJobRealRenderer";
 import { ARTIFACTS_DIR } from "../../lib/artifactStorage";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 

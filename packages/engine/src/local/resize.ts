@@ -3,7 +3,7 @@ import type {
   NodeDefinition,
   NodeExecutionContext,
   NodeExecutionResult,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import { bufferFromInput, writeArtifact } from "./imageUtils.js";
 
 const VALID_FIT = ["cover", "contain", "fill", "inside", "outside"] as const;

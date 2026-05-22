@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 
 // ── Props ──
 

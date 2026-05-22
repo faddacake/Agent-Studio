@@ -65,7 +65,7 @@ export default function WorkflowsPage() {
   // first-time visitors (show WelcomeScreen) from returning users who deleted
   // all workflows (show plain empty state).  Written by fetchWorkflows at line ~204.
   const [hadAny, setHadAny] = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem("aiStudio.workflow.hadAny") === "1",
+    typeof window !== "undefined" && localStorage.getItem("iteraStudio.workflow.hadAny") === "1",
   );
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -78,7 +78,7 @@ export default function WorkflowsPage() {
   const [search, setSearch] = useState(() => {
     if (typeof window === "undefined") return "";
     const p = new URLSearchParams(window.location.search);
-    return p.get("search") ?? localStorage.getItem("aiStudio.workflow.search") ?? "";
+    return p.get("search") ?? localStorage.getItem("iteraStudio.workflow.search") ?? "";
   });
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [editingTagsId, setEditingTagsId] = useState<string | null>(null);
@@ -96,7 +96,7 @@ export default function WorkflowsPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const [hasNoProviders, setHasNoProviders] = useState(false);
   const [providerBannerDismissed, setProviderBannerDismissed] = useState(() =>
-    typeof window !== "undefined" && localStorage.getItem("aiStudio.noProviderBanner.dismissed") === "1",
+    typeof window !== "undefined" && localStorage.getItem("iteraStudio.noProviderBanner.dismissed") === "1",
   );
   const [savingTemplateId, setSavingTemplateId] = useState<string | null>(null);
   const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null);
@@ -107,14 +107,14 @@ export default function WorkflowsPage() {
     const p = new URLSearchParams(window.location.search);
     const urlTag = p.get("tag");
     if (urlTag !== null) return urlTag || null;
-    return localStorage.getItem("aiStudio.workflow.tag") || null;
+    return localStorage.getItem("iteraStudio.workflow.tag") || null;
   });
   const [sortBy, setSortBy] = useState<"updated" | "lastRun" | "name" | "checkpoints">(() => {
     if (typeof window === "undefined") return "updated";
     const p = new URLSearchParams(window.location.search);
     const urlSort = p.get("sort");
     if (urlSort === "lastRun" || urlSort === "name" || urlSort === "updated") return urlSort;
-    const v = localStorage.getItem("aiStudio.workflow.sort");
+    const v = localStorage.getItem("iteraStudio.workflow.sort");
     return (v === "lastRun" || v === "name") ? v : "updated";
   });
 
@@ -124,7 +124,7 @@ export default function WorkflowsPage() {
     if (typeof window === "undefined") return false;
     const p = new URLSearchParams(window.location.search);
     if (p.has("pinned")) return p.get("pinned") === "1";
-    return localStorage.getItem("aiStudio.workflow.pinned") === "1";
+    return localStorage.getItem("iteraStudio.workflow.pinned") === "1";
   });
   const [hasCheckpointsFilter, setHasCheckpointsFilter] = useState(false);
   const [hasProvenanceFilter, setHasProvenanceFilter] = useState(false);
@@ -238,7 +238,7 @@ export default function WorkflowsPage() {
     if (res.ok) {
       const data = await res.json();
       setWorkflows(data);
-      if (data.length > 0) localStorage.setItem("aiStudio.workflow.hadAny", "1");
+      if (data.length > 0) localStorage.setItem("iteraStudio.workflow.hadAny", "1");
     }
     setLoading(false);
   }, []);
@@ -305,12 +305,12 @@ export default function WorkflowsPage() {
 
   useEffect(() => {
     // Persist to localStorage
-    localStorage.setItem("aiStudio.workflow.search", search);
-    if (activeTag) localStorage.setItem("aiStudio.workflow.tag", activeTag);
-    else localStorage.removeItem("aiStudio.workflow.tag");
-    localStorage.setItem("aiStudio.workflow.sort", sortBy);
-    if (pinnedOnly) localStorage.setItem("aiStudio.workflow.pinned", "1");
-    else localStorage.removeItem("aiStudio.workflow.pinned");
+    localStorage.setItem("iteraStudio.workflow.search", search);
+    if (activeTag) localStorage.setItem("iteraStudio.workflow.tag", activeTag);
+    else localStorage.removeItem("iteraStudio.workflow.tag");
+    localStorage.setItem("iteraStudio.workflow.sort", sortBy);
+    if (pinnedOnly) localStorage.setItem("iteraStudio.workflow.pinned", "1");
+    else localStorage.removeItem("iteraStudio.workflow.pinned");
     // Sync URL (replace so search typing doesn't pollute history)
     const params = new URLSearchParams();
     if (search) params.set("search", search);
@@ -530,7 +530,7 @@ export default function WorkflowsPage() {
 
   /** Dismiss the welcome screen permanently by marking the user as having had workflows. */
   function handleDismissWelcome() {
-    localStorage.setItem("aiStudio.workflow.hadAny", "1");
+    localStorage.setItem("iteraStudio.workflow.hadAny", "1");
     setHadAny(true);
   }
 
@@ -1091,7 +1091,7 @@ export default function WorkflowsPage() {
           <button
             aria-label="Dismiss no-providers banner"
             onClick={() => {
-              localStorage.setItem("aiStudio.noProviderBanner.dismissed", "1");
+              localStorage.setItem("iteraStudio.noProviderBanner.dismissed", "1");
               setProviderBannerDismissed(true);
             }}
             style={{

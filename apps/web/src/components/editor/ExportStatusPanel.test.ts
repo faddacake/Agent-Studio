@@ -26,7 +26,7 @@
  *
  * Uses react-dom/server renderToStaticMarkup — no browser globals required.
  *
- * Run: pnpm --filter @aistudio/web test:components
+ * Run: pnpm --filter /web test:components
  */
 
 import { describe, it } from "node:test";

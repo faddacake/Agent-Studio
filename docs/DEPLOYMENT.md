@@ -1,6 +1,6 @@
 # Deployment
 
-This guide covers deploying AI Studio using the existing Dockerfile. The recommended path is **Railway** for simplicity, but the same Docker image works on any container platform.
+This guide covers deploying Itera Studio using the existing Dockerfile. The recommended path is **Railway** for simplicity, but the same Docker image works on any container platform.
 
 ## Production Docker image
 

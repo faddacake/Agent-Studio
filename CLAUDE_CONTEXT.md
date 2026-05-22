@@ -1,6 +1,6 @@
-# AI Studio — Claude Context
+# Itera Studio — Claude Context
 
-This repository contains **AI Studio**, a self-hosted visual workflow builder for AI pipelines.
+This repository contains **Itera Studio**, a self-hosted visual workflow builder for AI pipelines.
 
 Architecture has already been established.  
 Do NOT re-audit the repository unless explicitly instructed.

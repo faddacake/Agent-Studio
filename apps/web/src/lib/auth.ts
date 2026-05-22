@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { getDb, schema } from "@aistudio/db";
-import { getMasterKey } from "@aistudio/crypto";
+import { getDb, schema } from "@iterastudio/db";
+import { getMasterKey } from "@iterastudio/crypto";
 import { eq } from "drizzle-orm";
 
 const COOKIE_NAME = "aistudio_session";

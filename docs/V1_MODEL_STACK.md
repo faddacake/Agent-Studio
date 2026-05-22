@@ -1,4 +1,4 @@
-# V1 Model Stack — AI Studio
+# V1 Model Stack — Itera Studio
 
 Date: 2026-03-17
 

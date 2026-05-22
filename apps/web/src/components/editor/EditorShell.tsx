@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { AspectRatio, EditorProject, Scene, TextOverlay } from "@/lib/editorProjectTypes";
-import type { ArtifactRef } from "@aistudio/shared";
+import type { ArtifactRef } from "@iterastudio/shared";
 import { afterRemove, afterMove, afterReorder, afterDurationEdit, resolvePlayStart, resolveReplay, resolveActiveId } from "@/lib/playbackCoherence";
 import { totalDurationMs, sceneStartMs, activeSceneIndex, clampDurationS, DEFAULT_VIDEO_DURATION_S, DEFAULT_IMAGE_DURATION_S } from "@/lib/sceneTiming";
 import { buildRenderPlan } from "@/lib/renderPlan";
@@ -457,6 +457,7 @@ export function EditorShell({ project }: EditorShellProps) {
       setTimeout(() => setSaveState("idle"), 2000);
     } catch {
       setSaveState("error");
+      setTimeout(() => setSaveState((s) => s === "error" ? "idle" : s), 3000);
     }
   }, [project.id, projectName, aspectRatio, scenes, audioTrack]);
 

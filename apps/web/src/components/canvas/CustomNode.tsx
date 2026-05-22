@@ -3,7 +3,7 @@
 import { memo, useEffect, useState } from "react";
 import Link from "next/link";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
-import type { Port } from "@aistudio/shared";
+import type { Port } from "@iterastudio/shared";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { useShallow } from "zustand/react/shallow";
 import { formatDuration, formatCost, formatElapsed } from "@/lib/formatExecution";

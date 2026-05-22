@@ -13,7 +13,7 @@
  *   - ExportJobStatusResponse shape: renderResult is PersistedRenderResult | null
  *   - No raw DB column names (render_result) in the typed shape
  *
- * Run with: pnpm --filter @aistudio/web test:lib
+ * Run with: pnpm --filter /web test:lib
  */
 
 import { describe, it } from "node:test";

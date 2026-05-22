@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  */
 import { NextResponse } from "next/server";
 import { and, eq } from "drizzle-orm";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { getRunCoordinator } from "@/lib/runCoordinator";
 
 export async function GET(

@@ -4,7 +4,7 @@
  * Exercises the banner's visibility transitions using a self-contained HTML
  * fixture that mirrors WorkflowCanvas.tsx's success / failure paths.
  *
- * Run: pnpm --filter @aistudio/web test:a11y:browser
+ * Run: pnpm --filter /web test:a11y:browser
  */
 
 import { test, expect } from "@playwright/test";

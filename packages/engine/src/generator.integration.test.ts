@@ -17,8 +17,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
 
-import type { NodeExecutionContext } from "@aistudio/shared";
-import { isArtifactRef, type CandidateCollection } from "@aistudio/shared";
+import type { NodeExecutionContext } from "@iterastudio/shared";
+import { isArtifactRef, type CandidateCollection } from "@iterastudio/shared";
 
 import {
   MockGeneratorAdapter,

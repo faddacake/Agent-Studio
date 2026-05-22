@@ -5,7 +5,7 @@
  * JSON.parse — no schema filtering occurs at any layer. These tests lock that
  * contract so future optional Scene fields don't silently vanish on save/load.
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it } from "node:test";

@@ -11,9 +11,9 @@ import {
   templatePackLoader,
   parseTemplatePack,
   type TemplatePack,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
-const STORAGE_KEY = "aiStudio.templatePacks";
+const STORAGE_KEY = "iteraStudio.templatePacks";
 
 // ── Read ──
 

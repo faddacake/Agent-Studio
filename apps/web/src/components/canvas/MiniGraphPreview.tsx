@@ -19,7 +19,7 @@ import {
   type Node,
   type Edge,
 } from "@xyflow/react";
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 
 // ── Mini node renderer ─────────────────────────────────────────────────────
 

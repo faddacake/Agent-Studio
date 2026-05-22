@@ -1,6 +1,6 @@
-# AI Studio — Master Context Prompt
+# Itera Studio — Master Context Prompt
 
-You are assisting with the development of **AI Studio**, a self-hosted visual workflow builder for AI image and video pipelines.
+You are assisting with the development of **Itera Studio**, a self-hosted visual workflow builder for AI image and video pipelines.
 
 Before making any changes, read the following files in the repository:
 
@@ -17,7 +17,7 @@ You must treat them as the **source of truth** for all decisions.
 
 # Product Overview
 
-AI Studio is a **self-hostable visual workflow builder** that allows users to chain together AI models into multi-step pipelines using a drag-and-drop node editor.
+Itera Studio is a **self-hostable visual workflow builder** that allows users to chain together AI models into multi-step pipelines using a drag-and-drop node editor.
 
 Example pipeline:
 
@@ -25,7 +25,7 @@ Prompt → Flux → Nano Banana → Kling → Upscale → Export
 
 Users provide their own API keys for providers like Replicate, Fal AI, Stability, and OpenAI.
 
-AI Studio **does not run inference itself** and does **not charge compute markups**.
+Itera Studio **does not run inference itself** and does **not charge compute markups**.
 
 The application runs locally using Docker.
 
@@ -103,7 +103,7 @@ Adapters must be **provider-agnostic** and follow the interface strictly.
 
 # Important Constraints
 
-AI Studio **never**:
+Itera Studio **never**:
 
 - runs inference locally
 - trains models
@@ -170,7 +170,7 @@ When implementing changes:
 
 # Current Development Phase
 
-AI Studio is currently in **Phase 2** development.
+Itera Studio is currently in **Phase 2** development.
 
 Active work includes:
 

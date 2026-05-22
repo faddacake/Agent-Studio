@@ -53,6 +53,7 @@ export interface TemplateEntry {
   name: string;
   graph: WorkflowGraph;
   preview?: string;
+  defaultPrompt?: string;
 }
 
 // ── Availability check result ──
@@ -156,6 +157,7 @@ export class TemplatePackLoader {
           name: templateId,
           graph,
           preview: pack.manifest.previews?.[templateId],
+          defaultPrompt: pack.manifest.defaultPrompts?.[templateId],
         });
       }
     }
@@ -180,6 +182,7 @@ export class TemplatePackLoader {
           name: templateId,
           graph,
           preview: pack.manifest.previews?.[templateId],
+          defaultPrompt: pack.manifest.defaultPrompts?.[templateId],
         });
         if (result.length >= limit) return result;
       }

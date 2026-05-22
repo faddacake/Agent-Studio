@@ -30,7 +30,7 @@ import {
   type NodeExecutionResult,
   NodeRuntimeKind,
   NodeCategory,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 import { RunCoordinator, type RunEvent, type DispatchJob, type RunState } from "./runCoordinator.js";
 import { NodeExecutor } from "./executor.js";
@@ -89,7 +89,7 @@ function buildTestWorkflowGraph(): WorkflowGraph {
         timeoutMs: 300000,
       },
       inputs: [{ id: "prompt_in", name: "Prompt", type: "text", direction: "input" }],
-      outputs: [{ id: "images_out", name: "Images", type: "image", direction: "output" }],
+      outputs: [{ id: "image_out", name: "Images", type: "image", direction: "output" }],
     },
     {
       id: NODE_CLIP,
@@ -194,7 +194,7 @@ function buildTestWorkflowGraph(): WorkflowGraph {
     // Prompt → ClipScoring (prompt context)
     { id: crypto.randomUUID(), source: NODE_PROMPT, sourceHandle: "text_out", target: NODE_CLIP, targetHandle: "prompt_in" },
     // ImageGen → ClipScoring (images)
-    { id: crypto.randomUUID(), source: NODE_IMAGEGEN, sourceHandle: "images_out", target: NODE_CLIP, targetHandle: "images_in" },
+    { id: crypto.randomUUID(), source: NODE_IMAGEGEN, sourceHandle: "image_out", target: NODE_CLIP, targetHandle: "images_in" },
     // ClipScoring → Ranking (scored candidates)
     { id: crypto.randomUUID(), source: NODE_CLIP, sourceHandle: "scored_images_out", target: NODE_RANKING, targetHandle: "items_in" },
     // Ranking → SocialFormat (top items)
@@ -236,7 +236,7 @@ describe("Graph-driven orchestration: WorkflowGraph → RunCoordinator → NodeE
     }));
 
     executor.registerLocal("image-generation", async () => ({
-      outputs: { images_out: MOCK_IMAGE_URLS },
+      outputs: { image_out: MOCK_IMAGE_URLS },
       cost: 0.05,
     }));
 

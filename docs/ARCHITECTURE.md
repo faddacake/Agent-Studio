@@ -1,6 +1,6 @@
 # Architecture
 
-AI Studio is a Turborepo + pnpm monorepo that ships a Next.js web app backed by a BullMQ worker and Redis.
+Itera Studio is a Turborepo + pnpm monorepo that ships a Next.js web app backed by a BullMQ worker and Redis.
 
 ## Monorepo layout
 

@@ -8,7 +8,7 @@
  * Server-side only — never import from client components.
  */
 
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── Artifact reference ────────────────────────────────────────────────────────
 

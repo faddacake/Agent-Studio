@@ -4,8 +4,8 @@
  * returns up to MAX_SUGGESTIONS action buttons to show in the Inspector.
  */
 
-import type { WorkflowGraph, WorkflowNode } from "@aistudio/shared";
-import { NodeType, nodeRegistry } from "@aistudio/shared";
+import type { WorkflowGraph, WorkflowNode } from "@iterastudio/shared";
+import { NodeType, nodeRegistry } from "@iterastudio/shared";
 import { initializeNodeRegistry } from "@/lib/nodeRegistryInit";
 import { createWorkflowNode } from "@/components/canvas/createWorkflowNode";
 import { useWorkflowStore, toFlowNode } from "@/stores/workflowStore";

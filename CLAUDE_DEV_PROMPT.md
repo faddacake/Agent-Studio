@@ -1,4 +1,4 @@
-# Claude Developer Prompt — AI Studio
+# Claude Developer Prompt — Itera Studio
 
 Always check docs/BUILD_STATUS.md before starting any task.
 

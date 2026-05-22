@@ -13,8 +13,8 @@ export const runtime = "nodejs";
 
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
-import { getDb, schema } from "@aistudio/db";
-import { WorkflowGraphSchema } from "@aistudio/shared";
+import { getDb, schema } from "@iterastudio/db";
+import { WorkflowGraphSchema } from "@iterastudio/shared";
 
 export async function GET(
   _req: Request,

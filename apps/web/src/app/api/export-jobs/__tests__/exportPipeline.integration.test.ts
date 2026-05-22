@@ -22,18 +22,18 @@
  *   - unrun pending job returns renderResult: null (negative case)
  *   - two independent jobs do not share renderResult state
  *
- * Run with: pnpm --filter @aistudio/web test:integration
+ * Run with: pnpm --filter /web test:integration
  */
 
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { schema } from "@aistudio/db";
+import { schema } from "@iterastudio/db";
 
 import { createEditorExportJob, getEditorExportJob } from "@/server/api/editorExportJobs";
 import { runExportJob } from "@/server/api/editorExportJobRunner";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── In-memory DB setup ────────────────────────────────────────────────────────
 

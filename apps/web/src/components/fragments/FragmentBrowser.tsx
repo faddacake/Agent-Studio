@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 
 export interface FragmentRow {
   id: string;

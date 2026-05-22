@@ -7,7 +7,7 @@
  * Server-side only — never import from client components.
  */
 
-import { getDb } from "@aistudio/db";
+import { getDb } from "@iterastudio/db";
 import { runExportJob, type ExportRunnerResult } from "./editorExportJobRunner";
 
 type Db = ReturnType<typeof getDb>;

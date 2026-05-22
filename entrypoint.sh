@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "[entrypoint] Starting AI Studio..."
+echo "[entrypoint] Starting Itera Studio..."
 
 # Ensure data directories exist
 mkdir -p /data/db /data/assets /data/config

@@ -10,7 +10,7 @@
 
 import type { RenderPlan } from "./renderPlan";
 import type { AspectRatio, AudioTrack } from "./editorProjectTypes";
-import type { ExportJobPayload, ExportSceneEntry } from "@aistudio/shared";
+import type { ExportJobPayload, ExportSceneEntry } from "@iterastudio/shared";
 
 export type { ExportJobPayload, ExportSceneEntry };
 

@@ -5,9 +5,9 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { eq } from "drizzle-orm";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 import type { PersistedRenderResult } from "./editorExportJobTypes";
 
 // ── Types ────────────────────────────────────────────────────────────────────

@@ -1,0 +1,48 @@
+# Claude Code ignore file for Itera Studio monorepo
+# Prevents wasting tokens on large/irrelevant directories and files
+
+# Dependencies and build outputs
+node_modules/
+dist/
+build/
+.turbo/
+.next/
+out/
+
+# Data and runtime files
+data/
+.env
+.env.local
+.env.*.local
+*.log
+*.sqlite
+*.db
+
+# Git and version control
+.git/
+.gitignore
+.github/
+
+# Temporary and cache files
+tmp/
+temp/
+.cache/
+*.tmp
+*.temp
+
+# Large asset directories (generated images/videos)
+public/assets/
+apps/web/public/assets/
+
+# Docker and container artifacts
+.docker/
+*.dockerignore
+
+# Test artifacts and coverage
+coverage/
+*.test-results/
+playwright-report/
+
+# Claude-specific
+.claude/
+CLAUDE.md.backup*

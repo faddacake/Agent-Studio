@@ -1,6 +1,6 @@
-# AI Studio Execution Flow
+# Itera Studio Execution Flow
 
-This document explains how a workflow run executes inside the AI Studio engine.
+This document explains how a workflow run executes inside the Itera Studio engine.
 
 ## Overview
 

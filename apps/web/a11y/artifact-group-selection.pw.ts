@@ -12,7 +12,7 @@
  *      fully-cleared → Clear disabled.
  *   4. Global All / None continue to work correctly after group-level changes.
  *
- * Run: pnpm --filter @aistudio/web test:a11y:browser
+ * Run: pnpm --filter /web test:a11y:browser
  */
 
 import { test, expect } from "@playwright/test";

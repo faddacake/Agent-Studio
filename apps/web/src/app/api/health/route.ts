@@ -17,7 +17,7 @@ export async function GET() {
 
   // DB check — optional, don't fail liveness if DB is unavailable
   try {
-    const { getDb } = await import("@aistudio/db");
+    const { getDb } = await import("@iterastudio/db");
     getDb();
     health.db = "connected";
   } catch (err: any) {

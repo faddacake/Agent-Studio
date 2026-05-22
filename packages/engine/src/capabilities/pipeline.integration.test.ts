@@ -22,7 +22,7 @@ import type {
   CandidateCollection,
   CandidateSelection,
   CandidateItem,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 import { executeClipScoring } from "./clipScoring.js";
 import { executeRanking } from "./ranking.js";

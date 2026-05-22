@@ -12,7 +12,7 @@
  *   - POST error: trigger surfaces error, moves to "error" state
  *   - status fetch error: poll error surfaces via error field
  *
- * Run: pnpm --filter @aistudio/web test:hooks
+ * Run: pnpm --filter /web test:hooks
  *
  * The hook is rendered in a real React tree via a minimal renderHook helper
  * backed by jsdom. A very short poll interval (10 ms) avoids needing fake

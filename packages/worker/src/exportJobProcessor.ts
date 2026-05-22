@@ -1,4 +1,4 @@
-import { getDb, schema, sql } from "@aistudio/db";
+import { getDb, schema, sql } from "@iterastudio/db";
 
 /**
  * Minimal payload shape for export-job queue messages.
@@ -22,7 +22,7 @@ type Db = ReturnType<typeof getDb>;
  *
  * Mirrors the contract of `runExportJob` in
  * `apps/web/src/server/api/editorExportJobRunner.ts`.
- * Direct SQL is used here because `@aistudio/worker` cannot import from
+ * Direct SQL is used here because `/worker` cannot import from
  * `apps/web`; the lifecycle semantics are identical.
  *
  *   pending → running   (atomic claim — fails fast on wrong status)

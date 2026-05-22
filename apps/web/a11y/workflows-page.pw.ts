@@ -9,7 +9,7 @@
  * The fixture file (a11y/fixtures/workflows.html) contains the actual design
  * tokens from globals.css and representative HTML across all card states.
  *
- * Run:  pnpm --filter @aistudio/web test:a11y:browser
+ * Run:  pnpm --filter /web test:a11y:browser
  */
 
 import path from "node:path";

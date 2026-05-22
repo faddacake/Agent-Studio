@@ -14,7 +14,7 @@
  *   - non-pending jobs are not claimed
  *   - atomicity: second call gets the next oldest after the first is claimed
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it } from "node:test";
@@ -22,7 +22,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { schema } from "@aistudio/db";
+import { schema } from "@iterastudio/db";
 
 import {
   createEditorExportJob,
@@ -31,7 +31,7 @@ import {
   executeExportJob,
   claimExportJob,
 } from "./editorExportJobs";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── In-memory DB setup ────────────────────────────────────────────────────────
 

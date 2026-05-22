@@ -29,7 +29,7 @@ import {
   type WorkflowNode,
   type WorkflowEdge,
   type NodeExecutionContext,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 import { RunCoordinator, type RunEvent, type DispatchJob, type RunState } from "./runCoordinator.js";
 import { NodeExecutor } from "./executor.js";

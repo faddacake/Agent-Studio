@@ -272,8 +272,8 @@ function buildComparisonGraph(prompt: string, models: ModelOption[]) {
       type: nodeType,
       position: { x: startX + i * xSpacing, y: 250 },
       data: {
-        providerId: model.provider,
-        modelId: model.id,
+        providerId: model.providerKey,
+        modelId: model.adapterModelId,
         label: model.name,
         params: { ...model.defaultParams, prompt },
         retryCount: 1,
@@ -335,27 +335,37 @@ function subscribeToRun(
   const controller = new AbortController();
   abortRef.current = controller;
 
+  // The graph stores adapterModelId (e.g. "fal-ai/flux-pro/v1.1") in node data,
+  // but runner.results entries use the catalog ID (e.g. "flux-1.1-pro").
+  // Build a reverse-lookup so SSE node_status events can match the right result row.
+  const adapterToCatalogId = new Map(models.map((m) => [m.adapterModelId, m.id]));
+
   const eventSource = new EventSource(`/api/workflows/${workflowId}/runs/${runId}/events`);
 
+  // onmessage fires for unnamed SSE events (no "event:" field).
+  // The server emits these alongside named "snapshot" events so both
+  // the canvas debugger (addEventListener) and this subscriber (onmessage) work.
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
 
       if (data.type === "node_status") {
-        // Extract outputUrl from whichever field the backend sends
-         const resolvedOutputUrl =
-           data.outputUrl ||
-           data.output_url ||
-           data.imageUrl ||
-           data.image_url ||
-           data.url ||
-           data.result ||
-           data.resultUrl;
+        const resolvedOutputUrl =
+          data.outputUrl ||
+          data.output_url ||
+          data.imageUrl ||
+          data.image_url ||
+          data.url ||
+          data.result ||
+          data.resultUrl;
+
+        // The SSE payload carries data.modelId = adapterModelId; map back to catalog ID.
+        const catalogId = adapterToCatalogId.get(data.modelId) ?? data.modelId;
 
         setState((s) => ({
           ...s,
           results: s.results.map((r) => {
-            if (r.modelId === data.modelId) {
+            if (r.modelId === catalogId) {
               return {
                 ...r,
                 status: data.status as ModelRunStatus,

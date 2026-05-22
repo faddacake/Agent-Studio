@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { RunDebugSnapshot, NodeDebugInfo, BlockedReason } from "@aistudio/engine";
+import type { RunDebugSnapshot, NodeDebugInfo, BlockedReason } from "@iterastudio/engine";
 
 // ── Status colors ──
 

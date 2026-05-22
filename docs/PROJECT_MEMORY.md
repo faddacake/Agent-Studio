@@ -1,4 +1,4 @@
-# PROJECT CONTEXT — AI Studio
+# PROJECT CONTEXT — Itera Studio
 
 Last Updated: {{DATE}}
 
@@ -6,7 +6,7 @@ Last Updated: {{DATE}}
 
 ## 1. Project Overview
 
-Project Name: AI Studio  
+Project Name: Itera Studio  
 Owner: Ben Harrelson  
 Purpose: All-in-one AI content creation and automation platform.
 

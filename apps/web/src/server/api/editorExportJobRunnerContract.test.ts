@@ -22,7 +22,7 @@
  *   - adapter failure is distinct from payload validation failure
  *   - adapter failure propagates and leaves job pending (not claimed)
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it } from "node:test";
@@ -31,7 +31,7 @@ import path from "node:path";
 import fs from "node:fs";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { schema } from "@aistudio/db";
+import { schema } from "@iterastudio/db";
 import { ARTIFACTS_DIR } from "../../lib/artifactStorage";
 
 import {
@@ -43,7 +43,7 @@ import {
 } from "./editorExportJobs";
 import { runExportJob } from "./editorExportJobRunner";
 import { processExportJob } from "./editorExportJobProcessor";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 import type { RenderResult } from "./editorExportJobRenderer";
 import type { PersistedRenderResult } from "./editorExportJobTypes";
 

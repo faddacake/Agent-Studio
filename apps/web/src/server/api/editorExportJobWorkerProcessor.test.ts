@@ -15,14 +15,14 @@
  *   - job already failed → throws (lifecycle guard enforced)
  *   - non-status DB fields are unchanged after processing
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { schema } from "@aistudio/db";
+import { schema } from "@iterastudio/db";
 
 import {
   createEditorExportJob,
@@ -31,7 +31,7 @@ import {
   executeExportJob,
 } from "./editorExportJobs";
 import { processExportJob } from "./editorExportJobProcessor";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── In-memory DB setup ────────────────────────────────────────────────────────
 

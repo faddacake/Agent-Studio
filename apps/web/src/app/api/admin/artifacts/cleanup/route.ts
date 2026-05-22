@@ -22,7 +22,7 @@ export const runtime = "nodejs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { ARTIFACTS_DIR } from "@/lib/artifactStorage";
 
 async function dirSizeBytes(dirPath: string): Promise<number> {

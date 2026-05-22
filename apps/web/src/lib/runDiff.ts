@@ -6,7 +6,7 @@
  * No backend calls; pure client-side utility.
  */
 
-import type { WorkflowGraph, WorkflowNode } from "@aistudio/shared";
+import type { WorkflowGraph, WorkflowNode } from "@iterastudio/shared";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

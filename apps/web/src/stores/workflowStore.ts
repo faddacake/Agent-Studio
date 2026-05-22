@@ -5,8 +5,8 @@ import type {
   WorkflowNode,
   WorkflowEdge,
   WorkflowGraph,
-} from "@aistudio/shared";
-import type { RunDebugSnapshot } from "@aistudio/engine";
+} from "@iterastudio/shared";
+import type { RunDebugSnapshot } from "@iterastudio/engine";
 import type { NodeLatestOutput } from "@/lib/runOutputs";
 import { computeStaleFromNode } from "@/lib/staleness";
 import { readBudgetCapFromStorage } from "@/hooks/useBudgetSettings";

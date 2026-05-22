@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
-import type { WorkflowNode, WorkflowEdge } from "@aistudio/shared";
-import { imageInputNode, promptTemplateNode } from "@aistudio/shared";
+import type { WorkflowNode, WorkflowEdge } from "@iterastudio/shared";
+import { imageInputNode, promptTemplateNode } from "@iterastudio/shared";
 import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 import { NodeConfig } from "./NodeConfig";
 import { useWorkflowStore } from "@/stores/workflowStore";

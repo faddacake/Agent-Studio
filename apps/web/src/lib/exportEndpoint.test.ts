@@ -11,7 +11,7 @@
  *   - naturalDurationMs absent from export payload (UI-only field)
  *   - no unexpected required fields
  *
- * Run with: pnpm --filter @aistudio/web test:lib
+ * Run with: pnpm --filter /web test:lib
  */
 
 import { describe, it } from "node:test";
@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 
 import { buildRenderPlan } from "./renderPlan";
 import { buildExportPayload } from "./exportPayload";
-import { ExportJobPayloadSchema } from "@aistudio/shared";
+import { ExportJobPayloadSchema } from "@iterastudio/shared";
 import type { Scene } from "./editorProjectTypes";
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────

@@ -16,10 +16,11 @@
  *   - Everything else      → truncated formatted JSON
  */
 
-import { useState, useEffect } from "react";
-import { isArtifactRef } from "@aistudio/shared";
-import type { ArtifactRef } from "@aistudio/shared";
-import type { RunDebugSnapshot } from "@aistudio/engine";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { isArtifactRef } from "@iterastudio/shared";
+import type { ArtifactRef } from "@iterastudio/shared";
+import type { RunDebugSnapshot } from "@iterastudio/engine";
 import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -42,8 +43,10 @@ export function RunOutputsPanel({
   runId,
   snapshot,
 }: RunOutputsPanelProps) {
+  const router = useRouter();
   const [nodeOutputs, setNodeOutputs] = useState<NodeOutputEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const [sendingToEditor, setSendingToEditor] = useState(false);
 
   const completedCount = snapshot?.summary.completed ?? 0;
 
@@ -62,6 +65,44 @@ export function RunOutputsPanel({
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [workflowId, runId, completedCount]);
+
+  const handleSendToEditor = useCallback(async () => {
+    if (sendingToEditor || !runId) return;
+    setSendingToEditor(true);
+    try {
+      type Scene = { id: string; type: "image" | "video"; src: string; duration: number };
+      const scenes: Scene[] = [];
+      for (const { outputs } of nodeOutputs) {
+        for (const value of Object.values(outputs)) {
+          if (isArtifactRef(value)) {
+            if (value.mimeType.startsWith("image/")) {
+              scenes.push({ id: crypto.randomUUID(), type: "image", src: value.path, duration: 5 });
+            } else if (value.mimeType.startsWith("video/")) {
+              scenes.push({ id: crypto.randomUUID(), type: "video", src: value.path, duration: 10 });
+            }
+          } else {
+            for (const ref of extractImageRefs(value)) {
+              scenes.push({ id: crypto.randomUUID(), type: "image", src: ref.path, duration: 5 });
+            }
+            for (const ref of extractVideoRefs(value)) {
+              scenes.push({ id: crypto.randomUUID(), type: "video", src: ref.path, duration: 10 });
+            }
+          }
+        }
+      }
+      if (scenes.length === 0) { setSendingToEditor(false); return; }
+      const res = await fetch("/api/editor-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: `Run ${runId.slice(0, 8)}`, aspectRatio: "16:9", scenes }),
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      const project = (await res.json()) as { id: string };
+      router.push(`/editor/${project.id}`);
+    } catch {
+      setSendingToEditor(false);
+    }
+  }, [sendingToEditor, runId, nodeOutputs, router]);
 
   if (!runId) {
     return (
@@ -103,8 +144,33 @@ export function RunOutputsPanel({
     );
   }
 
+  // Show the "Send to Video Editor" button whenever there are image or video artifacts.
+  const hasArtifacts = ordered.some(({ outputs }) =>
+    Object.values(outputs).some((v) =>
+      (isArtifactRef(v) && (v.mimeType.startsWith("image/") || v.mimeType.startsWith("video/"))) ||
+      extractImageRefs(v).length > 0 ||
+      extractVideoRefs(v).length > 0,
+    ),
+  );
+
   return (
     <div className="flex flex-col divide-y divide-neutral-800/60">
+      {hasArtifacts && (
+        <div className="px-4 py-3">
+          <button
+            type="button"
+            onClick={() => { void handleSendToEditor(); }}
+            disabled={sendingToEditor}
+            className={`w-full rounded-lg border py-2 text-sm font-semibold transition-colors ${
+              sendingToEditor
+                ? "cursor-default border-neutral-700 bg-neutral-900 text-neutral-500"
+                : "border-emerald-600 bg-emerald-600/15 text-emerald-300 hover:bg-emerald-600/25"
+            }`}
+          >
+            {sendingToEditor ? "Opening Editor…" : "Send to Video Editor →"}
+          </button>
+        </div>
+      )}
       {ordered.map(({ nodeId, outputs }) => (
         <NodeOutputSection
           key={nodeId}

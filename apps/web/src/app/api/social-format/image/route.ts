@@ -22,7 +22,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const upstream = await fetch(url);
+    // Server-side fetch requires absolute URLs. If url is a relative path (e.g.
+    // /api/artifacts?path=...) resolve it against the request's own origin so
+    // local artifact images work in addition to external CDN URLs.
+    const absoluteUrl = url.startsWith("/")
+      ? `${new URL(request.url).origin}${url}`
+      : url;
+    const upstream = await fetch(absoluteUrl);
     if (!upstream.ok) {
       return NextResponse.json({ error: "Failed to fetch source image" }, { status: 502 });
     }

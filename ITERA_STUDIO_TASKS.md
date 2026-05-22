@@ -1,4 +1,4 @@
-# AI Studio Task Queue
+# Itera Studio Task Queue
 
 **Status:** V1 complete — all core features shipped.  
 The items below are V1.1 and post-V1 work. Pick up from the top.

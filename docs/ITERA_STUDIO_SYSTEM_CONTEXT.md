@@ -1,4 +1,4 @@
-# AI Studio — Persistent System Context
+# Itera Studio — Persistent System Context
 
 *This file is the canonical reference for session continuity. Update it when architecture, capability, or workflow decisions change. Read it at the start of any session that involves product direction, capability planning, or architecture decisions.*
 
@@ -6,7 +6,7 @@
 
 ## Project Overview
 
-AI Studio is a self-hostable, local-first visual workflow builder for AI content generation. Users compose nodes on a canvas, wire them together, and run the DAG to produce images and videos. It is not a SaaS product — it runs entirely on the user's machine against third-party AI APIs (fal.ai, Replicate) that the user supplies keys for.
+Itera Studio is a self-hostable, local-first visual workflow builder for AI content generation. Users compose nodes on a canvas, wire them together, and run the DAG to produce images and videos. It is not a SaaS product — it runs entirely on the user's machine against third-party AI APIs (fal.ai, Replicate) that the user supplies keys for.
 
 **Monorepo:** Turborepo + pnpm
 **Apps:** `apps/web` — Next.js 15 app router, the only user-facing surface
@@ -152,10 +152,10 @@ The three supported image models give users a draft-vs-production and provider c
 
 ### Key Build Commands
 ```
-pnpm --filter @aistudio/shared run build   # build shared package
-pnpm --filter @aistudio/engine run build   # build engine package
-pnpm --filter @aistudio/web typecheck      # typecheck web app
-pnpm --filter @aistudio/engine run test    # run engine integration tests
+pnpm --filter /shared run build   # build shared package
+pnpm --filter /engine run build   # build engine package
+pnpm --filter /web typecheck      # typecheck web app
+pnpm --filter /engine run test    # run engine integration tests
 ```
 
 ### Pre-existing Known Issues
@@ -163,7 +163,7 @@ pnpm --filter @aistudio/engine run test    # run engine integration tests
 - Two incompatible `ProviderAdapter` interfaces exist (web thin vs `packages/adapters` rich) — not yet reconciled.
 
 ### Session Discipline
-- Always typecheck after changes: `pnpm --filter @aistudio/web typecheck`
+- Always typecheck after changes: `pnpm --filter /web typecheck`
 - Prefer editing existing files over creating new ones
 - Do not add model-specific UI branches — derive from registry/capability metadata
 - Keep `docs/SESSION_CONTEXT.md` updated at the end of each session

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import type { RunDebugSnapshot } from "@aistudio/engine";
+import type { RunDebugSnapshot } from "@iterastudio/engine";
 import { useWorkflowStore } from "@/stores/workflowStore";
 
 const TERMINAL_STATUSES = new Set([

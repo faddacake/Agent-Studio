@@ -3,7 +3,7 @@
  * compact, UI-friendly summary for the Inspector "Last Run" section.
  */
 
-import type { NodeDebugInfo } from "@aistudio/engine";
+import type { NodeDebugInfo } from "@iterastudio/engine";
 
 const MAX_ERROR_LEN = 200;
 

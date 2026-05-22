@@ -13,7 +13,7 @@
  *   All other edges are treated as unreached/pending.
  */
 
-import type { NodeDebugInfo } from "@aistudio/engine";
+import type { NodeDebugInfo } from "@iterastudio/engine";
 import type { Edge } from "@xyflow/react";
 
 export interface ExecutionPathSummary {

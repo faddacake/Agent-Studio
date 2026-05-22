@@ -1,4 +1,4 @@
-# AI Studio — Build Status
+# Itera Studio — Build Status
 
 **Current phase:** V1 complete — production-ready release candidate
 
@@ -68,7 +68,7 @@
 - [x] `SCHEDULER_BUDGET_CAP` env var respected on each triggered run
 
 ### Provider Management
-- [x] AES-256 encrypted API key storage in SQLite (`@aistudio/crypto`)
+- [x] AES-256 encrypted API key storage in SQLite (`/crypto`)
 - [x] Add/edit/delete providers at `/settings/providers`
 - [x] Inline key validation (`POST /api/providers/:id/validate`)
 - [x] Multi-provider support: Fal.ai, Replicate (extensible)

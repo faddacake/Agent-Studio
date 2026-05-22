@@ -7,9 +7,9 @@
  * Images are served via GET /api/artifacts?path=<encoded-path>.
  * Rank, CLIP score, and dimensions are shown when available.
  */
-import { isArtifactRef } from "@aistudio/shared";
-import type { ArtifactRef } from "@aistudio/shared";
-import type { CandidateItem } from "@aistudio/shared";
+import { isArtifactRef } from "@iterastudio/shared";
+import type { ArtifactRef } from "@iterastudio/shared";
+import type { CandidateItem } from "@iterastudio/shared";
 
 export interface ResultsGridProps {
   items: CandidateItem[];

@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { getDb, schema, sql } from "@aistudio/db";
+import { getDb, schema, sql } from "@iterastudio/db";
 
 function parseTags(raw: string | null | undefined): string[] {
   try { return JSON.parse(raw ?? "[]") ?? []; } catch { return []; }

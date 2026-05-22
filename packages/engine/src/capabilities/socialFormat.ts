@@ -3,12 +3,12 @@ import type {
   NodeExecutionContext,
   NodeExecutionResult,
   CandidateItem,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import {
   ensureCollection,
   attachCollectionMetadata,
   toCollection,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 // ── Platform content specs ──
 

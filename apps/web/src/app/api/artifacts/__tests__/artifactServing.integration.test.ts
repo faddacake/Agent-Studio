@@ -12,7 +12,7 @@
  *   - Independently validates the path-prefix security logic extracted from the
  *     route so the validation contract is tested without an HTTP server.
  *
- * Run: pnpm --filter @aistudio/web test:integration
+ * Run: pnpm --filter /web test:integration
  */
 
 import { describe, it, before, after } from "node:test";
@@ -26,7 +26,7 @@ import {
   REAL_PREVIEW_ARTIFACT_FILENAME,
   REAL_RENDER_ARTIFACT_FILENAME,
 } from "@/server/api/editorExportJobRealRenderer";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

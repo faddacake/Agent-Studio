@@ -4,7 +4,7 @@
  * No backend calls — pure client-side data.
  */
 
-import { NodeType } from "@aistudio/shared";
+import { NodeType } from "@iterastudio/shared";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 

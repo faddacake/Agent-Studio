@@ -1,5 +1,5 @@
 {
-  "name": "@aistudio/web",
+  "name": "@iterastudio/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -20,10 +20,10 @@
     "test:e2e": "playwright test --config playwright.e2e.config.ts"
   },
   "dependencies": {
-    "@aistudio/crypto": "workspace:*",
-    "@aistudio/db": "workspace:*",
-    "@aistudio/engine": "workspace:*",
-    "@aistudio/shared": "workspace:*",
+    "@iterastudio/crypto": "workspace:*",
+    "@iterastudio/db": "workspace:*",
+    "@iterastudio/engine": "workspace:*",
+    "@iterastudio/shared": "workspace:*",
     "@ioredis/commands": "^1.5.0",
     "@xyflow/react": "^12.10.1",
     "@xyflow/system": "^0.0.75",

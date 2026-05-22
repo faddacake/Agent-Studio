@@ -3,14 +3,14 @@ import type {
   NodeExecutionContext,
   NodeExecutionResult,
   CandidateScore,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import {
   ensureCollection,
   attachScores,
   rankByMetric,
   takeTopK,
   toCollection,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 /** The scoring metric name used by CLIP scoring. */
 const CLIP_METRIC = "clip_similarity";

@@ -2,7 +2,7 @@ import {
   registerBuiltInNodes,
   nodeRegistry,
   modelsToNodeDefinitions,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 import { IMAGE_MODELS, VIDEO_MODELS } from "@/config/models";
 
 let initialized = false;

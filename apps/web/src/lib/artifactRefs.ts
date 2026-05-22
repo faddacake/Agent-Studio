@@ -1,5 +1,5 @@
-import { isArtifactRef } from "@aistudio/shared";
-import type { ArtifactRef } from "@aistudio/shared";
+import { isArtifactRef } from "@iterastudio/shared";
+import type { ArtifactRef } from "@iterastudio/shared";
 
 /**
  * Recursively extract image ArtifactRefs from an unknown output value (max 3 levels deep).

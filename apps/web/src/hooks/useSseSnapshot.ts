@@ -8,7 +8,7 @@
  * Closes automatically when the run reaches a terminal status.
  */
 import { useState, useEffect, useRef } from "react";
-import type { RunDebugSnapshot } from "@aistudio/engine";
+import type { RunDebugSnapshot } from "@iterastudio/engine";
 
 const TERMINAL_STATUSES = new Set([
   "completed",
@@ -35,6 +35,10 @@ export function useSseSnapshot(
   });
 
   const esRef = useRef<EventSource | null>(null);
+  // Set to true when the server sends a "done" event or the client closes after
+  // a terminal snapshot — prevents the subsequent EventSource "error" event
+  // (fired on connection drop) from showing a spurious error to the user.
+  const closedNormallyRef = useRef(false);
 
   useEffect(() => {
     // Clean up any previous connection
@@ -47,6 +51,8 @@ export function useSseSnapshot(
       setState({ snapshot: null, connected: false, error: null });
       return;
     }
+
+    closedNormallyRef.current = false;
 
     const url = `/api/workflows/${workflowId}/runs/${runId}/events`;
     const es = new EventSource(url);
@@ -63,6 +69,7 @@ export function useSseSnapshot(
 
         // Auto-close on terminal status
         if (TERMINAL_STATUSES.has(snapshot.status)) {
+          closedNormallyRef.current = true;
           es.close();
           esRef.current = null;
           setState((prev) => ({ ...prev, connected: false }));
@@ -72,17 +79,31 @@ export function useSseSnapshot(
       }
     });
 
+    // Server sends "done" before closing the stream on terminal status.
+    // Mark the close as intentional so the subsequent "error" event is suppressed.
+    es.addEventListener("done", () => {
+      closedNormallyRef.current = true;
+      es.close();
+      esRef.current = null;
+      setState((prev) => ({ ...prev, connected: false }));
+    });
+
     es.addEventListener("error", () => {
+      // Suppress spurious errors that fire when the SSE stream closes normally
+      // (server closes connection after terminal status or "done" event).
+      if (closedNormallyRef.current) return;
+
       setState((prev) => ({
         ...prev,
         connected: false,
-        error: "SSE connection error",
+        error: "SSE connection error — could not reach the run stream. Check that the server is running.",
       }));
       es.close();
       esRef.current = null;
     });
 
     return () => {
+      closedNormallyRef.current = true; // Treat cleanup as intentional
       es.close();
       esRef.current = null;
     };

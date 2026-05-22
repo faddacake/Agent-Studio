@@ -1,6 +1,6 @@
 # Technical Design Document
 
-**Product**: AI Studio
+**Product**: Itera Studio
 **Based on**: PRD v1 (approved)
 **Scope**: MVP (single-user, Docker, Replicate + Fal AI)
 **Architecture Interview**: v1 complete (60 decisions resolved)
@@ -353,7 +353,7 @@ ai-studio/
 
 - **Package manager**: pnpm (workspaces)
 - **Build orchestration**: Turborepo — caches builds, runs tasks in dependency order. Pipeline tasks: `lint`, `typecheck`, `build`, `test`, `dev`. Standard `package.json` scripts for portability (migration to Nx possible post-MVP without refactoring).
-- **Internal packages** (`packages/*`) are referenced via pnpm workspace protocol (`"@aistudio/engine": "workspace:*"`)
+- **Internal packages** (`packages/*`) are referenced via pnpm workspace protocol (`"@iterastudio/engine": "workspace:*"`)
 - All packages compile to ESM with TypeScript project references
 
 ### Why This Structure
@@ -477,7 +477,7 @@ All API errors follow a consistent structure:
 
 Standard error codes: `VALIDATION_ERROR`, `NOT_FOUND`, `PROVIDER_ERROR`, `PROVIDER_RATE_LIMIT`, `PROVIDER_VALIDATION_ERROR`, `PROVIDER_INTERNAL_ERROR`, `BUDGET_EXCEEDED`, `RUN_FAILED`, `UNAUTHORIZED`, `CONFLICT`, `INTERNAL_ERROR`.
 
-Provider-originated errors are mapped to AI Studio error codes with a sanitized `providerError` block for debugging. The block includes provider name and a safe message, but redacts secrets, headers, and opaque internal IDs. Full raw payloads are stored on disk (see §8) and accessible via an explicit "Show raw payload" action in the inspector.
+Provider-originated errors are mapped to Itera Studio error codes with a sanitized `providerError` block for debugging. The block includes provider name and a safe message, but redacts secrets, headers, and opaque internal IDs. Full raw payloads are stored on disk (see §8) and accessible via an explicit "Show raw payload" action in the inspector.
 
 ### Configuration Split
 
@@ -514,7 +514,7 @@ Non-canvas pages (settings, providers, history, usage, login) are responsive and
 interface WorkflowState {
   workflowId: string | null;
   workflowVersion: number;        // Optimistic concurrency token
-  nodes: CanvasNode[];            // React Flow nodes with AI Studio metadata
+  nodes: CanvasNode[];            // React Flow nodes with Itera Studio metadata
   edges: CanvasEdge[];            // React Flow edges with port type info
   isDirty: boolean;
   pendingSave: boolean;
@@ -574,7 +574,7 @@ Server state (provider list, models, templates, run history, usage) is managed e
 
 **React Flow** is the canvas library (PRD §10), running in **controlled mode** with Zustand as the single source of truth. Configuration:
 
-- `nodeTypes` registry maps AI Studio node types to custom React components. Each model mode is a separate node type (e.g., `"flux-text-to-image"` and `"flux-image-to-image"` are distinct types with different port schemas). No conditional parameter logic.
+- `nodeTypes` registry maps Itera Studio node types to custom React components. Each model mode is a separate node type (e.g., `"flux-text-to-image"` and `"flux-image-to-image"` are distinct types with different port schemas). No conditional parameter logic.
 - Additionally: `"comment"` node type for non-executable sticky-note annotations (resizable, draggable, color-taggable text boxes).
 - Each `CustomNode` component renders: provider icon, model name, parameter summary, status badge (idle/running/awaiting_download/complete/error), and **live output thumbnail** (updated per-node via SSE during runs, using worker-generated preview images).
 - Ports use custom `Handle` components styled by type: `image` (blue), `video` (purple), `text` (green), `number` (orange), `json` (gray). **Each input port accepts exactly one connection** — the canvas rejects a second edge targeting the same port. Nodes requiring multiple same-type inputs declare separate named ports (e.g., `image_a`, `image_b`) or explicit array ports.

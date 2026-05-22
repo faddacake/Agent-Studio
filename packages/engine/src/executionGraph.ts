@@ -1,4 +1,4 @@
-import type { WorkflowGraph, WorkflowNode, WorkflowEdge } from "@aistudio/shared";
+import type { WorkflowGraph, WorkflowNode, WorkflowEdge } from "@iterastudio/shared";
 
 // ── Types ──
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import type { NodeParameterSchema, UISchema, NodeParameterField } from "@aistudio/shared";
+import type { NodeParameterSchema, UISchema, NodeParameterField } from "@iterastudio/shared";
 import { SchemaField } from "./SchemaField";
 
 interface SchemaFormProps {

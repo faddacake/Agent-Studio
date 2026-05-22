@@ -24,7 +24,7 @@ import {
   type CandidateCollection,
   type CandidateSelection,
   type NodeExecutionContext,
-} from "@aistudio/shared";
+} from "@iterastudio/shared";
 
 import { executeBestOfN }       from "./capabilities/bestOfN.js";
 import { executeSocialFormat }  from "./capabilities/socialFormat.js";

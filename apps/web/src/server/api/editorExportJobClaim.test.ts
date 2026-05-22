@@ -16,14 +16,14 @@
  *   - failed job throws clearly (terminal state)
  *   - repeated claim does not mutate the row
  *
- * Run with: pnpm --filter @aistudio/web test:server
+ * Run with: pnpm --filter /web test:server
  */
 
 import { describe, it, before } from "node:test";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { schema } from "@aistudio/db";
+import { schema } from "@iterastudio/db";
 
 import {
   createEditorExportJob,
@@ -33,7 +33,7 @@ import {
   markExportJobCompleted,
   markExportJobFailed,
 } from "./editorExportJobs";
-import type { ExportJobPayload } from "@aistudio/shared";
+import type { ExportJobPayload } from "@iterastudio/shared";
 
 // ── In-memory DB setup ────────────────────────────────────────────────────────
 

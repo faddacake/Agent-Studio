@@ -9,9 +9,9 @@
  * Server-side only — never import from client components.
  */
 
-import { getDb } from "@aistudio/db";
-import type { ExportJobPayload } from "@aistudio/shared";
-import { ExportJobPayloadSchema } from "@aistudio/shared";
+import { getDb } from "@iterastudio/db";
+import type { ExportJobPayload } from "@iterastudio/shared";
+import { ExportJobPayloadSchema } from "@iterastudio/shared";
 import { getExportJobRenderer, type ExportJobRenderer, type RenderResult } from "./editorExportJobRenderer";
 import { executeExportJob, getEditorExportJob, setExportJobRenderResult } from "./editorExportJobs";
 import type { ExportArtifactRef, PersistedRenderResult } from "./editorExportJobTypes";

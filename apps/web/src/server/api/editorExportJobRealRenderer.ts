@@ -45,7 +45,7 @@
 import path from "node:path";
 import fs from "node:fs";
 import { spawnSync } from "node:child_process";
-import type { ExportJobPayload, ExportSceneEntry } from "@aistudio/shared";
+import type { ExportJobPayload, ExportSceneEntry } from "@iterastudio/shared";
 import type { ExportArtifactRef, ExportJobRenderer, RenderResult } from "./editorExportJobTypes";
 import { ARTIFACTS_DIR } from "../../lib/artifactStorage";
 

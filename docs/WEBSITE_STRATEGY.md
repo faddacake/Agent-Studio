@@ -1,10 +1,10 @@
-# AI Studio Website Strategy
+# Itera Studio Website Strategy
 
 ## Target User
 Creators and solo entrepreneurs who generate AI content (images, video, text) and want to move from scattered SaaS tools to a single, self-hosted workflow builder. They value privacy, cost control, and repeatability.
 
 ## Positioning
-**AI Studio** is the self-hosted AI workflow studio. One Docker container, your API keys, full privacy. Build pipelines, run multi-model comparisons, control costs — without vendor lock-in.
+**Itera Studio** is the self-hosted AI workflow studio. One Docker container, your API keys, full privacy. Build pipelines, run multi-model comparisons, control costs — without vendor lock-in.
 
 Key differentiators vs. SaaS alternatives:
 - **Self-hosted**: Data never leaves your machine

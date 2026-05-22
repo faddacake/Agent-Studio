@@ -1,5 +1,5 @@
 {
-  "name": "@aistudio/worker",
+  "name": "@iterastudio/worker",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -16,9 +16,9 @@
   "dependencies": {
     "bullmq": "^5.31.0",
     "ioredis": "^5.4.2",
-    "@aistudio/db": "workspace:*",
-    "@aistudio/engine": "workspace:*",
-    "@aistudio/shared": "workspace:*"
+    "@iterastudio/db": "workspace:*",
+    "@iterastudio/engine": "workspace:*",
+    "@iterastudio/shared": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

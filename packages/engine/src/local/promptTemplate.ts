@@ -1,4 +1,4 @@
-import type { NodeExecutionContext, NodeExecutionResult } from "@aistudio/shared";
+import type { NodeExecutionContext, NodeExecutionResult } from "@iterastudio/shared";
 
 /**
  * Local executor for the "prompt-template" node type.

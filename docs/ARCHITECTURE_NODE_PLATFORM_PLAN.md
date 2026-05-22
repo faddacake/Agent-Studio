@@ -82,7 +82,7 @@ Date: 2026-03-05
 |------|---------|
 | `nodeJobProcessor.ts` | `processNodeJob()` — bridges BullMQ jobs and the engine executor. Builds `NodeExecutionContext` from `NodeJobData`, delegates to `nodeExecutor.execute()`, returns `NodeJobResult`. |
 | `index.ts` | Updated to use `nodeJobProcessor` in prediction job handler. |
-| `package.json` | Added `@aistudio/engine` and `@aistudio/shared` workspace dependencies. |
+| `package.json` | Added `/engine` and `/shared` workspace dependencies. |
 
 ---
 
@@ -683,7 +683,7 @@ Imported packs and user-created templates were lost on page reload. The `Templat
 
 ### Solution
 
-A `templatePackStorage.ts` utility that persists packs to `localStorage` under `aiStudio.templatePacks` and rehydrates them on gallery mount.
+A `templatePackStorage.ts` utility that persists packs to `localStorage` under `iteraStudio.templatePacks` and rehydrates them on gallery mount.
 
 ### Files
 
@@ -700,7 +700,7 @@ A `templatePackStorage.ts` utility that persists packs to `localStorage` under `
 
 ### How it works
 
-1. **Storage format**: `aiStudio.templatePacks` localStorage key contains a JSON array of raw `TemplatePack` objects (same shape as `parseTemplatePack()` input).
+1. **Storage format**: `iteraStudio.templatePacks` localStorage key contains a JSON array of raw `TemplatePack` objects (same shape as `parseTemplatePack()` input).
 2. **Rehydration** (on gallery mount): `ensurePacksLoaded()` → `registerBuiltInPacks()` → `rehydratePersistedPacks()`. Each stored pack is validated via `parseTemplatePack()`. Built-in packs and duplicates are skipped. Invalid packs are silently dropped.
 3. **Persist on import**: After `templatePackLoader.register(pack)`, `persistPack(pack)` adds/replaces the pack in localStorage.
 4. **Persist on save-as**: After building the `TemplatePack`, it's registered in the loader AND persisted to localStorage before the download triggers.

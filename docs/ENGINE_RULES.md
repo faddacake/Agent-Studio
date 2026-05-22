@@ -1,4 +1,4 @@
-# AI Studio Engine Rules
+# Itera Studio Engine Rules
 
 These rules must be followed when modifying the engine.
 

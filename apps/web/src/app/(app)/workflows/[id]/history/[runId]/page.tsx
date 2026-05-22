@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState, use, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 import { computeRunDiff } from "@/lib/runDiff";
-import { isArtifactRef } from "@aistudio/shared";
-import type { ArtifactRef } from "@aistudio/shared";
+import { isArtifactRef } from "@iterastudio/shared";
+import type { ArtifactRef } from "@iterastudio/shared";
 import { extractImageRefs, extractVideoRefs } from "@/lib/artifactRefs";
 import { ArtifactPreviewPanel } from "@/components/prompt/ArtifactPreviewPanel";
 import type { ArtifactPreviewable } from "@/components/prompt/ArtifactPreviewPanel";

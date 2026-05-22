@@ -5,11 +5,11 @@
  * React Flow refuses to complete the drag and shows a visual rejection
  * (connection line stays red / won't snap to the target handle).
  *
- * Delegates to PORT_COMPATIBILITY from @aistudio/shared — no parallel logic.
+ * Delegates to PORT_COMPATIBILITY from /shared — no parallel logic.
  */
 import type { Connection, Edge, Node } from "@xyflow/react";
-import { PORT_COMPATIBILITY } from "@aistudio/shared";
-import type { Port } from "@aistudio/shared";
+import { PORT_COMPATIBILITY } from "@iterastudio/shared";
+import type { Port } from "@iterastudio/shared";
 
 /**
  * Returns true if the proposed connection is allowed by PORT_COMPATIBILITY.

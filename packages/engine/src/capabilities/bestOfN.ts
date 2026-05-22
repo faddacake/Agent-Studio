@@ -23,8 +23,8 @@ import type {
   NodeExecutionContext,
   NodeExecutionResult,
   CandidateItem,
-} from "@aistudio/shared";
-import { toCollection } from "@aistudio/shared";
+} from "@iterastudio/shared";
+import { toCollection } from "@iterastudio/shared";
 
 import { writeArtifact } from "../local/imageUtils.js";
 import { executeClipScoring } from "./clipScoring.js";
@@ -51,10 +51,14 @@ function resolveGenerator(context: NodeExecutionContext): GeneratorAdapter {
     return injected as GeneratorAdapter;
   }
 
-  const provider = (context.params.provider as string | undefined) ?? "fal";
+  // Default to "mock" when params.provider is unset — aligns with the parameterSchema
+  // defaultValue and ensures fresh canvas nodes work without a key configured.
+  // Nodes explicitly set to "fal" (via inspector or template) will still use the real provider.
+  const provider = (context.params.provider as string | undefined) ?? "mock";
   const modelId  = context.params.model as string | undefined;
-  // __apiKey injected by the dispatch layer (DB config takes precedence over env var).
-  const apiKey   = (context.params.__apiKey as string | undefined) ?? process.env.FAL_API_KEY;
+  // __apiKey is injected by the dispatch layer (DB key takes precedence; env var is the fallback).
+  // Trim the env var for safety — .env.local files sometimes have leading/trailing spaces.
+  const apiKey   = (context.params.__apiKey as string | undefined) ?? process.env.FAL_API_KEY?.trim();
 
   // When the user explicitly selects a real provider (anything other than "mock"),
   // a configured API key is required.  Fail clearly so the user knows what to fix

@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import { useSearchParams } from "next/navigation";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { WorkflowCanvas } from "@/components/canvas";
-import type { WorkflowGraph } from "@aistudio/shared";
+import type { WorkflowGraph } from "@iterastudio/shared";
 
 interface WorkflowRow {
   id: string;

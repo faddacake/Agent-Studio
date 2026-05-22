@@ -1,7 +1,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, schema } from "@aistudio/db";
+import { getDb, schema } from "@iterastudio/db";
 import { and, eq } from "drizzle-orm";
 
 // POST /api/workflows/:id/revisions/:revisionId/restore

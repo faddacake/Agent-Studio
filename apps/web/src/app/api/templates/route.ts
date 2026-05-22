@@ -2,7 +2,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { getDb, schema, sql } from "@aistudio/db";
+import { getDb, schema, sql } from "@iterastudio/db";
 import { eq } from "drizzle-orm";
 
 function parseGraph(raw: string) {

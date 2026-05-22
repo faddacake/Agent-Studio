@@ -1,8 +1,8 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { getDb, schema } from "@aistudio/db";
-import { encrypt } from "@aistudio/crypto";
+import { getDb, schema } from "@iterastudio/db";
+import { encrypt } from "@iterastudio/crypto";
 import { eq } from "drizzle-orm";
 
 const KNOWN_PROVIDERS = new Set([
@@ -16,7 +16,7 @@ const KNOWN_PROVIDERS = new Set([
  * POST /api/providers/:id
  *
  * Save or update a provider API key.
- * Encrypts the key with AES-256-GCM (via @aistudio/crypto) before storing.
+ * Encrypts the key with AES-256-GCM (via /crypto) before storing.
  * The salt is embedded in api_key_encrypted as "${salt}:${ciphertext}".
  * Never returns the key to the client.
  */

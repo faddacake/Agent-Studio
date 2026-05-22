@@ -5,7 +5,7 @@
  * are rejected with the expected error paths. The schema is the single runtime
  * validator backend consumers use when receiving an export-job request.
  *
- * Run with: pnpm --filter @aistudio/shared test
+ * Run with: pnpm --filter /shared test
  */
 
 import { describe, it } from "node:test";

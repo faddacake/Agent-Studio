@@ -5,7 +5,7 @@
  * windows, overlay payloads, video context, and cross-cutting invariants that
  * must hold regardless of scene composition.
  *
- * Run with: pnpm --filter @aistudio/web test:lib
+ * Run with: pnpm --filter /web test:lib
  */
 
 import { describe, it } from "node:test";

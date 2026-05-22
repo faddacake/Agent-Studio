@@ -4,7 +4,7 @@
  * Each describe block covers one mutation type; cases follow the rules
  * documented in playbackCoherence.ts.
  *
- * Run with: pnpm --filter @aistudio/web test:lib
+ * Run with: pnpm --filter /web test:lib
  */
 
 import { describe, it } from "node:test";
