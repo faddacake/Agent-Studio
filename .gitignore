@@ -22,3 +22,10 @@ Thumbs.db
 # Logs
 *.log
 apps/web/data/
+
+# Worker local data (SQLite DB, backups)
+packages/worker/data/
+
+# Claude worktrees and backups
+.claude/worktrees/
+.claude-backup-*/
