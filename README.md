@@ -63,12 +63,44 @@ Open **http://localhost:3001**.
 
 ## Providers
 
-Add at least one image generation provider to run workflows. Go to **Settings → Providers** after starting the app, or set keys directly in `.env`:
+Add at least one provider API key to run workflows. Go to **Settings → Providers** after starting the app — keys are encrypted at rest with AES-256-GCM.
 
-| Provider | Environment variable |
-|----------|---------------------|
-| Fal.ai | `FAL_API_KEY` |
-| Replicate | `REPLICATE_API_KEY` |
+### Image & Video Generation
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| **Fal.ai** | FLUX 1.1 Pro, FLUX Schnell, Kling 1.6 | Recommended starting point |
+| **Replicate** | Stable Diffusion XL, MiniMax Video-01 | Thousands of open-source models |
+| **Stability AI** | Stable Diffusion 3, SDXL | Direct Stability hosted inference |
+| **Midjourney** | v6, v6.1 | Via Midjourney API gateway |
+
+### Language Models
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| **OpenAI** | GPT-4o, o1, o3-mini, DALL·E 3 | Text + image generation |
+| **Anthropic** | Claude 3.5 Sonnet, Haiku, Opus | Top-tier reasoning and writing |
+| **Grok (xAI)** | Grok-2, Grok-3, Grok Aurora | Real-time knowledge, image gen |
+| **Ollama** | Llama 3, Mistral, Gemma 2, Phi-3 | Self-hosted; enter your server URL |
+
+### Multimodal
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| **Google AI** | Gemini 2.0 Flash, Imagen 3, Veo 3 | Text, image, and video generation |
+
+### Voice & Audio
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| **ElevenLabs** | Multilingual v2, Turbo v2.5 | Hyper-realistic voice synthesis |
+
+### Cloud Providers
+
+| Provider | Models | Notes |
+|----------|--------|-------|
+| **AWS Bedrock** | Claude 3, Llama 3, Amazon Titan | Format: `ACCESS_KEY:SECRET:REGION` |
+| **Azure OpenAI** | GPT-4o, GPT-4 Turbo, DALL·E 3 | Format: `ENDPOINT\|API_KEY` |
 
 ---
 
